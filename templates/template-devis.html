@@ -1,139 +1,211 @@
 <!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Devis - {{QUOTE_NUMBER}}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 
-<html lang="fr"> <head> <meta charset="UTF-8" /> <meta name="viewport" content="width=device-width, initial-scale=1.0" /> <title>Devis - {{QUOTE_NUMBER}}</title> <script src="https://cdn.tailwindcss.com"></script> <style> @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } } body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; /* Dimensions A4 pour un rendu PDF cohérent */ width: 210mm; min-height: 297mm; margin: auto; } .avoid-break { page-break-inside: avoid; break-inside: avoid-column; } </style> </head> <body class="bg-white text-gray-900 p-10 md:p-16"> <div class="max-w-3xl mx-auto">
+    <style>
+      @media print {
+        body {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+      }
 
-  <header class="flex justify-between items-start mb-12" aria-label="En-tête du devis">
-    <div>
-      <h1 class="text-3xl font-bold text-gray-900">{{COMPANY_NAME}}</h1>
-      <p class="text-gray-600 text-sm mt-1">{{COMPANY_EMAIL}}</p>
-      <p class="text-gray-600 text-sm">{{COMPANY_PHONE}}</p>
-      <p class="text-gray-600 text-sm">{{COMPANY_ADDRESS}}</p>
-    </div>
-    <div class="text-right">
-      <h2 class="text-4xl font-extrabold uppercase text-amber-600">
-        Devis
-      </h2>
-      <p class="text-gray-700 mt-1 font-medium text-lg"># {{QUOTE_NUMBER}}</p>
-    </div>
-  </header>
+      /* 2. ON FORCE LA POLICE SYSTÈME FIABLE */
+      body {
+        /* On force Arial par-dessus le CDN de Tailwind */
+        font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
+        width: 210mm;
+        min-height: 297mm;
+        margin: auto;
+      }
 
-  <section class="grid grid-cols-2 gap-8 mb-12" aria-label="Informations client et devis">
-    
-    <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 avoid-break">
-      <h3 class="text-xs font-semibold uppercase text-gray-500 tracking-wide mb-3">
-        Facturé à
-      </h3>
-      <p class="text-lg font-medium text-gray-800">{{CLIENT_NAME}}</p>
-      <p class="text-gray-600 text-sm mt-1">{{CLIENT_ADDRESS}}</p>
-      <p class="text-gray-600 text-sm">{{CLIENT_EMAIL}}</p>
-      <p class="text-gray-600 text-sm">{{CLIENT_PHONE}}</p>
-    </div>
-    
-    <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 text-right avoid-break">
-      <h3 class="text-xs font-semibold uppercase text-gray-500 tracking-wide mb-3">
-        Détails du devis
-      </h3>
-      <div class="space-y-1 text-sm">
-        <p class="text-gray-600">
-          <span class="font-medium text-gray-800">Date d'émission :</span>
-          {{ISSUE_DATE}}
-        </p>
-        <p class="text-gray-600">
-          <span class="font-medium text-gray-800">Date de validité :</span>
-          {{EXPIRY_DATE}}
-        </p>
-         <p class="text-gray-600 mt-2">
-          <span class="font-medium text-gray-800">Condition :</span>
-          {{PAYMENT_TERMS}}
-        </p>
-      </div>
-    </div>
-  </section>
+      .avoid-break {
+        page-break-inside: avoid;
+        break-inside: avoid-column;
+      }
 
-  <section class="mb-12" aria-label="Lignes du devis">
-    <table class="min-w-full" role="table">
-      <thead class="bg-gray-100 border-b border-gray-300">
-        <tr>
-          <th
-            scope="col"
-            class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-1/2"
-          >
-            Description
-          </th>
-          <th
-            scope="col"
-            class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-20"
-          >
-            Qté
-          </th>
-          <th
-            scope="col"
-            class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider w-32"
-          >
-            Prix Unitaire
-          </th>
-          <th
-            scope="col"
-            class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider w-32"
-          >
-            Total HT
-          </th>
-        </tr>
-      </thead>
-      <tbody class="bg-white divide-y divide-gray-200">
-        {{LINE_ITEMS}}
-      </tbody>
-    </table>
-  </section>
+      /* 3. ON FORCE LE CORRECTIF DES CHIFFRES */
+      .amount {
+        white-space: nowrap !important;
+        font-variant-numeric: tabular-nums !important;
+        font-feature-settings: "tnum" !important;
+        letter-spacing: 0 !important;
+      }
+    </style>
+  </head>
 
-  <section class="flex justify-end mb-12" aria-label="Total du devis">
-    <div class="w-full max-w-md bg-gray-50 p-6 rounded-lg border border-gray-200 avoid-break">
-      <div class="space-y-4 text-sm">
-        
-        <div class="flex justify-between">
-          <span class="text-gray-600">Sous-total HT</span>
-          <span class="font-medium text-gray-800">{{SUBTOTAL}} €</span>
+  <body class="bg-white text-gray-900 p-10 md:p-16">
+    <div class="max-w-3xl mx-auto">
+      <!-- HEADER -->
+      <header
+        class="flex justify-between items-start mb-12"
+        aria-label="En-tête du devis"
+      >
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900">{{COMPANY_NAME}}</h1>
+          <p class="text-gray-600 text-sm mt-1">{{COMPANY_EMAIL}}</p>
+          <p class="text-gray-600 text-sm">{{COMPANY_PHONE}}</p>
+          <p class="text-gray-600 text-sm">{{COMPANY_ADDRESS}}</p>
         </div>
-        
-        <div class="flex justify-between">
-          <span class="text-gray-600">TVA ({{VAT_RATE}}%)</span>
-          <span class="font-medium text-gray-800">{{VAT_AMOUNT}} €</span>
+
+        <div class="text-right">
+          <h2 class="text-4xl font-extrabold uppercase text-amber-600">
+            Devis
+          </h2>
+          <p class="text-gray-700 mt-1 font-medium text-lg">
+            # {{QUOTE_NUMBER}}
+          </p>
         </div>
-        
-        <div class="flex justify-between border-t border-gray-200 pt-4">
-          <span class="text-gray-600">Remise</span>
-          <span class="font-medium text-green-600">- {{DISCOUNT_AMOUNT}} €</span>
+      </header>
+
+      <!-- CLIENT + DEVIS INFO -->
+      <section
+        class="grid grid-cols-2 gap-8 mb-12"
+        aria-label="Informations client et devis"
+      >
+        <div
+          class="bg-gray-50 p-6 rounded-lg border border-gray-200 avoid-break"
+        >
+          <h3
+            class="text-xs font-semibold uppercase text-gray-500 tracking-wide mb-3"
+          >
+            Facturé à
+          </h3>
+          <p class="text-lg font-medium text-gray-800">{{CLIENT_NAME}}</p>
+          <p class="text-gray-600 text-sm mt-1">{{CLIENT_ADDRESS}}</p>
+          <p class="text-gray-600 text-sm">{{CLIENT_EMAIL}}</p>
+          <p class="text-gray-600 text-sm">{{CLIENT_PHONE}}</p>
         </div>
-        
-        <div class="bg-white rounded-md p-4 mt-4 border border-gray-200">
-          <div class="flex justify-between items-center">
-            <span class="text-xl font-bold text-gray-900">Total TTC</span>
-            <span class="text-2xl font-extrabold text-amber-600">{{TOTAL_TTC}} €</span>
+
+        <div
+          class="bg-gray-50 p-6 rounded-lg border border-gray-200 text-right avoid-break"
+        >
+          <h3
+            class="text-xs font-semibold uppercase text-gray-500 tracking-wide mb-3"
+          >
+            Détails du devis
+          </h3>
+          <div class="space-y-1 text-sm">
+            <p class="text-gray-600">
+              <span class="font-medium text-gray-800">Date d'émission :</span>
+              {{ISSUE_DATE}}
+            </p>
+
+            <p class="text-gray-600">
+              <span class="font-medium text-gray-800">Date de validité :</span>
+              {{EXPIRY_DATE}}
+            </p>
+
+            <p class="text-gray-600 mt-2">
+              <span class="font-medium text-gray-800">Condition :</span>
+              {{PAYMENT_TERMS}}
+            </p>
           </div>
         </div>
+      </section>
 
-      </div>
+      <!-- LINE ITEMS -->
+      <section class="mb-12" aria-label="Lignes du devis">
+        <table class="min-w-full" role="table">
+          <thead class="bg-gray-100 border-b border-gray-300">
+            <tr>
+              <th
+                scope="col"
+                class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-1/2"
+              >
+                Description
+              </th>
+              <th
+                scope="col"
+                class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-20"
+              >
+                Qté
+              </th>
+              <th
+                scope="col"
+                class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider w-32"
+              >
+                Prix Unitaire
+              </th>
+              <th
+                scope="col"
+                class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider w-32"
+              >
+                Total HT
+              </th>
+            </tr>
+          </thead>
+
+          <tbody class="bg-white divide-y divide-gray-200">
+            {{LINE_ITEMS}}
+          </tbody>
+        </table>
+      </section>
+
+      <!-- TOTALS -->
+      <section class="flex justify-end mb-12" aria-label="Total du devis">
+        <div
+          class="w-full max-w-md bg-gray-50 p-6 rounded-lg border border-gray-200 avoid-break"
+        >
+          <div class="space-y-4 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-600">Sous-total HT</span>
+              <span class="font-medium text-gray-800 amount"
+                >{{SUBTOTAL}} €</span
+              >
+            </div>
+
+            <div class="flex justify-between">
+              <span class="text-gray-600">TVA ({{VAT_RATE}}%)</span>
+              <span class="font-medium text-gray-800 amount"
+                >{{VAT_AMOUNT}} €</span
+              >
+            </div>
+
+            <div class="flex justify-between border-t border-gray-200 pt-4">
+              <span class="text-gray-600">Remise</span>
+              <span class="font-medium text-green-600 amount"
+                >- {{DISCOUNT_AMOUNT}} €</span
+              >
+            </div>
+
+            <div class="bg-white rounded-md p-4 mt-4 border border-gray-200">
+              <div class="flex justify-between items-center">
+                <span class="text-xl font-bold text-gray-900">Total TTC</span>
+                <span class="text-2xl font-extrabold text-amber-600 amount"
+                  >{{TOTAL_TTC}} €</span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FOOTER -->
+      <footer
+        class="border-t border-gray-300 pt-8 mt-12"
+        aria-label="Pied de page"
+      >
+        <h3 class="text-base font-semibold text-gray-800 mb-2">
+          Notes & Conditions
+        </h3>
+        <p class="text-xs text-gray-600 leading-relaxed mb-6">{{TERMS}}</p>
+
+        <h3 class="text-base font-semibold text-gray-800 mb-2">
+          Informations de Paiement
+        </h3>
+        <p class="text-xs text-gray-600 leading-relaxed">
+          {{PAYMENT_DETAILS}}
+        </p>
+
+        <p class="text-center text-gray-500 text-xs mt-12">
+          Merci pour votre confiance.
+        </p>
+      </footer>
     </div>
-  </section>
-
-  <footer class="border-t border-gray-300 pt-8 mt-12" aria-label="Pied de page">
-    <h3 class="text-base font-semibold text-gray-800 mb-2">
-      Notes & Conditions
-    </h3>
-    <p class="text-xs text-gray-600 leading-relaxed mb-6">
-      {{TERMS}}
-    </p>
-    
-    <h3 class="text-base font-semibold text-gray-800 mb-2">
-      Informations de Paiement
-    </h3>
-    <p class="text-xs text-gray-600 leading-relaxed">
-      {{PAYMENT_DETAILS}}
-    </p>
-
-    <p class="text-center text-gray-500 text-xs mt-12">
-      Merci pour votre confiance.
-    </p>
-  </footer>
-</div>
-</body> </html>
+  </body>
+</html>

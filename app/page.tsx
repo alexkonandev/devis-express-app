@@ -1,4 +1,6 @@
-
+import React from "react";
+// 1. IMPORTER LE COMPOSANT IMAGE
+import Image from "next/image";
 import {
   ShieldCheckIcon,
   CalculatorIcon,
@@ -66,10 +68,15 @@ export default function HomePage() {
                     <span className="w-3 h-3 rounded-full bg-neutral-300"></span>
                   </div>
                 </div>
-                <div className="w-full h-96 bg-neutral-100/50 flex items-center justify-center rounded-b-xl">
-                  <p className="text-neutral-500 font-medium">
-                    Aperçu de l&apos;interface
-                  </p>
+
+                {/* --- 2. PREMIER ENDROIT MODIFIÉ --- */}
+                <div className="relative w-full h-96 rounded-b-xl overflow-hidden bg-neutral-100/50">
+                  <Image
+                    src="/interface-preview.png"
+                    alt="Aperçu de l'interface de Devis Express"
+                    fill
+                    className="object-cover object-top"
+                  />
                 </div>
               </div>
             </div>
@@ -79,6 +86,7 @@ export default function HomePage() {
             className="flex flex-col items-center gap-y-12"
             id="fonctionnalites"
           >
+            {/* ... (Section fonctionnalités inchangée) ... */}
             <div className="text-center max-w-2xl">
               <h2 className="text-4xl font-bold tracking-tighter">
                 Conçu pour la vitesse.
@@ -136,14 +144,21 @@ export default function HomePage() {
             </div>
             <div className="w-full">
               <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-xl [box-shadow:0_0_0_1px_rgba(0,0,0,0.03),0_1px_3px_rgba(0,0,0,0.03),0_30px_60px_-10px_rgba(0,0,0,0.07)]">
-                <div className="w-full h-96 bg-neutral-100 rounded-lg flex items-center justify-center border border-neutral-200">
-                  <p className="text-neutral-500 font-medium">Aperçu du PDF</p>
+                {/* --- 3. DEUXIÈME ENDROIT MODIFIÉ --- */}
+                <div className="relative w-full h-96 rounded-lg overflow-hidden border border-neutral-200 ">
+                  <Image
+                    src="/pdf-preview.png"
+                    alt="Aperçu d'un devis PDF généré par Devis Express"
+                    fill
+                    className="object-contain object-center p-4"
+                  />
                 </div>
               </div>
             </div>
           </section>
 
           <section className="bg-neutral-900 text-white rounded-2xl">
+            {/* ... (Section CTA inchangée) ... */}
             <div className="flex flex-col items-center gap-y-6 text-center p-12 md:p-16">
               <h2 className="text-4xl  tracking-tighter">
                 Prêt à créer votre premier devis ?
@@ -163,6 +178,7 @@ export default function HomePage() {
         </div>
 
         <footer className="border-t border-neutral-200 py-10">
+          {/* ... (Footer inchangé) ... */}
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <p className="text-sm text-neutral-500">
               © {new Date().getFullYear()} Devis Express.
