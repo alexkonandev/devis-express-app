@@ -60,8 +60,8 @@ export default function HomePage() {
             </div>
 
             <div className="mt-12 w-full max-w-4xl">
-              <div className="relative rounded-xl border border-neutral-200 bg-white shadow-lg [box-shadow:0_0_0_1px_rgba(0,0,0,0.03),0_1px_3px_rgba(0,0,0,0.03),0_30px_60px_-10px_rgba(0,0,0,0.07)]">
-                <div className="h-10 rounded-t-xl bg-neutral-50 border-b border-neutral-200 flex items-center p-4">
+              <div className="relative rounded-xl border border-neutral-200 pb-4 bg-white shadow-lg [box-shadow:0_0_0_1px_rgba(0,0,0,0.03),0_1px_3px_rgba(0,0,0,0.03),0_30px_60px_-10px_rgba(0,0,0,0.07)]">
+                <div className="h-10 rounded-t-xl bg-neutral-50 border-b border-neutral-200 flex items-center p-4 ">
                   <div className="flex gap-x-2">
                     <span className="w-3 h-3 rounded-full bg-neutral-300"></span>
                     <span className="w-3 h-3 rounded-full bg-neutral-300"></span>
@@ -70,9 +70,9 @@ export default function HomePage() {
                 </div>
 
                 {/* --- 2. PREMIER ENDROIT MODIFIÉ --- */}
-                <div className="relative w-full h-96 rounded-b-xl overflow-hidden bg-neutral-100/50">
+                <div className="relative w-full h-96 rounded-b-xl overflow-hidden bg-neutral-100/50 ">
                   <Image
-                    src="/interface-preview.png"
+                    src="/interface-previews.png"
                     alt="Aperçu de l'interface de Devis Express"
                     fill
                     className="object-cover object-top"
@@ -157,7 +157,7 @@ export default function HomePage() {
             </div>
           </section>
 
-          <section className="bg-neutral-900 text-white rounded-2xl">
+          <section className="bg-neutral-950 text-white rounded-2xl">
             {/* ... (Section CTA inchangée) ... */}
             <div className="flex flex-col items-center gap-y-6 text-center p-12 md:p-16">
               <h2 className="text-4xl  tracking-tighter">

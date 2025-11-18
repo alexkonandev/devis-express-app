@@ -1,19 +1,17 @@
 "use client";
 
-import React, {
-  useState, // Gardé pour isLoading/error
-  useMemo, // Gardé pour les calculs
-  ChangeEvent,
-  FormEvent,
-} from "react";
+import React, { useState, useMemo } from "react";
+import { useQuoteStore } from "@/store/quote.store";
 
-// --- Import du Store et des Types ---
-import { useQuoteStore, QuoteDataState, LineItem } from "@/store/quote.store";
+import {
+  PlusIcon,
+  TrashIcon,
+  Loader2,
+  AlertCircle,
+  Save,
+  FileDown,
+} from "lucide-react";
 
-// --- Icônes Lucide ---
-import { PlusIcon, TrashIcon, Loader2, AlertCircle, Save } from "lucide-react";
-
-// --- Composants shadcn/ui ---
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,25 +34,23 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 
-// --- Composant Principal: Le Formulaire "Cerveau" ---
-export function QuoteEditorForm() {
-  // --- LECTURE DEPUIS ZUSTAND ---
+export function QuoteEditorForm({ mode }) {
+  const isEditMode = mode === "edit";
+
   const data = useQuoteStore((state) => state.activeQuote);
 
-  // Récupérer les actions du store
   const {
     updateActiveQuoteField,
     updateActiveLineItem,
     addActiveLineItem,
     removeActiveLineItem,
-    saveActiveQuoteToList, // On aura besoin de le lier
+    saveActiveQuoteToList,
   } = useQuoteStore();
 
-  // --- États Locaux (UI) (Conservés) ---
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoadingPdf, setIsLoadingPdf] = useState(false);
+  const [isLoadingSave, setIsLoadingSave] = useState(false);
+  const [error, setError] = useState(null);
 
-  // --- Calculs (Conservés) ---
   const totals = useMemo(() => {
     if (!data)
       return { subTotal: 0, totalAfterDiscount: 0, taxAmount: 0, totalTTC: 0 };
@@ -69,43 +65,45 @@ export function QuoteEditorForm() {
     return { subTotal, totalAfterDiscount, taxAmount, totalTTC };
   }, [data]);
 
-  // --- Handlers (Refactorisés pour appeler le store) ---
-  const createNestedHandler =
-    <T extends keyof QuoteDataState>(group: T) =>
-    (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const { name, value } = e.target;
-      const isNumeric = ["vatRatePercent", "discountAmountEuros"].includes(
-        name
-      );
-      updateActiveQuoteField(
-        group,
-        name,
-        isNumeric ? parseFloat(value) || 0 : value
-      );
-    };
+  const createNestedHandler = (group) => (e) => {
+    const { name, value } = e.target;
+    const isNumeric = ["vatRatePercent", "discountAmountEuros"].includes(name);
+    updateActiveQuoteField(
+      group,
+      name,
+      isNumeric ? parseFloat(value) || 0 : value
+    );
+  };
 
   const handleCompanyChange = createNestedHandler("company");
   const handleClientChange = createNestedHandler("client");
   const handleQuoteChange = createNestedHandler("quote");
   const handleFinancialsChange = createNestedHandler("financials");
 
-  const handleLineChange = (
-    index: number,
-    field: keyof LineItem,
-    value: LineItem[keyof LineItem]
-  ) => {
+  const handleLineChange = (index, field, value) => {
     updateActiveLineItem(index, field, value);
   };
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSaveOnly = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsLoadingSave(true);
+    setError(null);
+    try {
+      saveActiveQuoteToList();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoadingSave(false);
+    }
+  };
+
+  const handleSubmitPdf = async (e) => {
+    e.preventDefault();
+    setIsLoadingPdf(true);
     setError(null);
 
-    // 1. Sauvegarder l'état actuel dans la liste (via le store)
     saveActiveQuoteToList();
 
-    // 2. Préparer les données pour l'API PDF
     const apiData = {
       ...data,
       items: data.items.map((item) => ({
@@ -122,7 +120,6 @@ export function QuoteEditorForm() {
       },
     };
 
-    // 3. Appel API
     try {
       const response = await fetch("/api/pdf/generate", {
         method: "POST",
@@ -150,7 +147,7 @@ export function QuoteEditorForm() {
         err instanceof Error ? err.message : "Une erreur inconnue est survenue."
       );
     } finally {
-      setIsLoading(false);
+      setIsLoadingPdf(false);
     }
   };
 
@@ -162,27 +159,27 @@ export function QuoteEditorForm() {
     );
   }
 
-  // --- Le JSX est maintenant le formulaire lui-même ---
   return (
-    // Note : Le <form> est déplacé ici,
-    // il sera soit en pleine page, soit dans le <Sheet>
-    <form
-      onSubmit={handleSubmit}
-      className="flex flex-col h-full" // Important pour le <Sheet>
-    >
-      <div className="flex-grow overflow-y-auto p-4 md:p-8">
-        {" "}
-        {/* Scrollable content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <CompanySection
-              company={data.company}
-              onChange={handleCompanyChange}
+    <form onSubmit={handleSubmitPdf} className="flex flex-col h-full  w-full">
+      <div className="   w-full ">
+        <div className="flex w-full justify-between space-x-6">
+          <div className="lg:col-span-2 space-y-6 w-8/12 ">
+            {mode === "create" && (
+              <CompanySection
+                company={data.company}
+                onChange={handleCompanyChange}
+              />
+            )}
+
+            <ClientSection
+              client={data.client}
+              onChange={handleClientChange}
+              mode={mode}
             />
-            <ClientSection client={data.client} onChange={handleClientChange} />
             <QuoteDetailsSection
               quote={data.quote}
               onChange={handleQuoteChange}
+              isEditMode={isEditMode}
             />
             <QuoteItemsSection
               items={data.items}
@@ -193,38 +190,29 @@ export function QuoteEditorForm() {
             <NotesSection quote={data.quote} handleChange={handleQuoteChange} />
           </div>
 
-          <div className="lg:col-span-1 space-y-8">
-            <div className="lg:sticky lg:top-8">
+          <div className="lg:col-span-1 space-y-8 w-96">
+            <div
+              className={`lg:sticky ${isEditMode ? "lg:top-8" : "lg:top-22"}`}
+            >
               <SummarySection
+                mode={mode}
                 totals={totals}
                 financials={data.financials}
                 handleChange={handleFinancialsChange}
-                isLoading={isLoading}
+                isLoadingPdf={isLoadingPdf}
+                isLoadingSave={isLoadingSave}
+                onSaveOnly={handleSaveOnly}
                 error={error}
               />
             </div>
           </div>
         </div>
       </div>
-      {/* Le bouton "Générer PDF" est maintenant dans le SummarySection,
-        MAIS pour le <Sheet>, on pourrait vouloir un footer flottant.
-        Pour l'instant, on le laisse dans le Summary pour plus de simplicité.
-      */}
     </form>
   );
 }
 
-// --- Composants d'UI (identiques à avant) ---
-
-// Composant de champ réutilisable (Inchangé)
-function FormField({
-  label,
-  name,
-  ...props
-}: {
-  label: string;
-  name: string;
-} & React.InputHTMLAttributes<HTMLInputElement>) {
+function FormField({ label, name, ...props }) {
   return (
     <div className="space-y-2">
       <Label htmlFor={name}>{label}</Label>
@@ -233,15 +221,7 @@ function FormField({
   );
 }
 
-// Composant de champ réutilisable (Inchangé)
-function FormTextArea({
-  label,
-  name,
-  ...props
-}: {
-  label: string;
-  name: string;
-} & React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+function FormTextArea({ label, name, ...props }) {
   return (
     <div className="space-y-2">
       <Label htmlFor={name}>{label}</Label>
@@ -250,14 +230,7 @@ function FormTextArea({
   );
 }
 
-// (CompanySection, ClientSection, QuoteDetailsSection)
-function CompanySection({
-  company,
-  onChange,
-}: {
-  company: QuoteDataState["company"];
-  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
-}) {
+function CompanySection({ company, onChange }) {
   return (
     <Card>
       <CardHeader>
@@ -297,13 +270,7 @@ function CompanySection({
   );
 }
 
-function ClientSection({
-  client,
-  onChange,
-}: {
-  client: QuoteDataState["client"];
-  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
-}) {
+function ClientSection({ client, onChange, mode }) {
   return (
     <Card>
       <CardHeader>
@@ -316,7 +283,7 @@ function ClientSection({
             name="name"
             value={client.name}
             onChange={onChange}
-            placeholder="Doe SARL"
+            placeholder={mode === "create" ? "Nouveau client..." : "Doe SARL"}
           />
           <FormField
             label="Email"
@@ -346,13 +313,7 @@ function ClientSection({
   );
 }
 
-function QuoteDetailsSection({
-  quote,
-  onChange,
-}: {
-  quote: QuoteDataState["quote"];
-  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
-}) {
+function QuoteDetailsSection({ quote, onChange, isEditMode }) {
   return (
     <Card>
       <CardHeader>
@@ -365,6 +326,9 @@ function QuoteDetailsSection({
             name="number"
             value={quote.number}
             onChange={onChange}
+            disabled={isEditMode}
+            readOnly={isEditMode}
+            className={isEditMode ? "opacity-70 cursor-not-allowed" : ""}
           />
           <FormField
             label="Date d'émission"
@@ -386,29 +350,13 @@ function QuoteDetailsSection({
   );
 }
 
-// (QuoteItemsSection)
-function QuoteItemsSection({
-  items,
-  handleChange,
-  addItem,
-  removeItem,
-}: {
-  items: LineItem[];
-  handleChange: (
-    index: number,
-    field: keyof LineItem,
-    value: LineItem[keyof LineItem]
-  ) => void;
-  addItem: () => void;
-  removeItem: (index: number) => void;
-}) {
+function QuoteItemsSection({ items, handleChange, addItem, removeItem }) {
   return (
     <Card>
       <CardHeader>
         <CardTitle>Lignes d&apos;articles</CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Mobile View */}
         <div className="md:hidden space-y-4">
           {items.map((item, index) => {
             const rowTotal = item.quantity * item.unitPriceEuros;
@@ -416,6 +364,7 @@ function QuoteItemsSection({
               <Card key={item.id} className="bg-muted/50">
                 <CardContent className="p-4 space-y-4">
                   <div className="flex justify-between items-start gap-2">
+                 
                     <Input
                       placeholder="Titre de l'article"
                       value={item.title}
@@ -494,7 +443,6 @@ function QuoteItemsSection({
           })}
         </div>
 
-        {/* Desktop View */}
         <div className="hidden md:block">
           <Table>
             <TableHeader>
@@ -599,14 +547,7 @@ function QuoteItemsSection({
   );
 }
 
-// (NotesSection)
-function NotesSection({
-  quote,
-  handleChange,
-}: {
-  quote: QuoteDataState["quote"];
-  handleChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
-}) {
+function NotesSection({ quote, handleChange }) {
   return (
     <Card>
       <CardHeader>
@@ -642,29 +583,22 @@ function NotesSection({
   );
 }
 
-// (SummarySection)
 function SummarySection({
+  mode,
   totals,
   financials,
   handleChange,
-  isLoading,
+  isLoadingPdf,
+  isLoadingSave,
+  onSaveOnly,
   error,
-}: {
-  totals: {
-    subTotal: number;
-    totalAfterDiscount: number;
-    taxAmount: number;
-    totalTTC: number;
-  };
-  financials: QuoteDataState["financials"];
-  handleChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  isLoading: boolean;
-  error: string | null;
 }) {
+  const isEditMode = mode === "edit";
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Résumé</CardTitle>
+        <CardTitle>{isEditMode ? "Actions" : "Résumé"}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
         <dl className="space-y-3">
@@ -730,17 +664,60 @@ function SummarySection({
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        <Button type="submit" size="lg" disabled={isLoading} className="w-full">
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isLoading ? "Génération en cours..." : "GÉNÉRER LE PDF"}
-        </Button>
+
+        {isEditMode ? (
+          <Button
+            type="button"
+            size="lg"
+            onClick={onSaveOnly}
+            disabled={isLoadingSave}
+            className="w-full"
+          >
+            {isLoadingSave ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            Mettre à jour
+          </Button>
+        ) : (
+          <Button
+            type="submit"
+            size="lg"
+            disabled={isLoadingPdf}
+            className="w-full"
+          >
+            {isLoadingPdf ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <FileDown className="mr-2 h-4 w-4" />
+            )}
+            Générer le PDF
+          </Button>
+        )}
+
+        {isEditMode && (
+          <Button
+            type="submit"
+            size="lg"
+            variant="outline"
+            disabled={isLoadingPdf}
+            className="w-full"
+          >
+            {isLoadingPdf ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <FileDown className="mr-2 h-4 w-4" />
+            )}
+            Générer le PDF
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );
 }
 
-// (SummaryRow)
-function SummaryRow({ label, value }: { label: string; value: string }) {
+function SummaryRow({ label, value }) {
   return (
     <div className="flex justify-between items-center">
       <dt className="text-sm text-muted-foreground">{label}</dt>
