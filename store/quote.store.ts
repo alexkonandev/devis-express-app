@@ -1,7 +1,24 @@
-import {create} from "zustand";
-import { persist } from "zustand/middleware"; // On importe le middleware 'persist'
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
-// --- Types (Tu peux les déplacer dans un fichier /types.ts plus tard) ---
+// --- 1. TYPES ---
+
+export type QuoteStatus =
+  | "draft"
+  | "sent"
+  | "accepted"
+  | "rejected"
+  | "archived";
+
+export interface QuoteMeta {
+  status: QuoteStatus;
+  folder: string | null;
+  isFavorite: boolean;
+  createdAt: string;
+  updatedAt: string;
+  tags: string[];
+}
+
 export interface LineItem {
   id: string;
   title: string;
@@ -11,6 +28,7 @@ export interface LineItem {
 }
 
 export interface QuoteDataState {
+  meta: QuoteMeta;
   company: { name: string; address: string; phone: string; email: string };
   client: { name: string; address: string; phone: string; email: string };
   quote: {
@@ -25,7 +43,7 @@ export interface QuoteDataState {
   financials: { vatRatePercent: number; discountAmountEuros: number };
 }
 
-// --- Fonctions utilitaires ---
+const getISODate = () => new Date().toISOString();
 const getTodayDate = () => new Date().toISOString().split("T")[0];
 const getFutureDate = (days: number) => {
   const date = new Date();
@@ -33,7 +51,6 @@ const getFutureDate = (days: number) => {
   return date.toISOString().split("T")[0];
 };
 
-// Fonction pour générer un numéro de devis unique (pour 'resetActiveQuote')
 const generateQuoteNumber = () => {
   const year = new Date().getFullYear();
   const randomId = Math.floor(Math.random() * 1000)
@@ -42,8 +59,15 @@ const generateQuoteNumber = () => {
   return `DEV-${year}-${randomId}`;
 };
 
-// --- État Initial pour un NOUVEAU devis ---
 export const DEFAULT_QUOTE_DATA: QuoteDataState = {
+  meta: {
+    status: "draft",
+    folder: null,
+    isFavorite: false,
+    createdAt: getISODate(),
+    updatedAt: getISODate(),
+    tags: [],
+  },
   company: {
     name: "Alex Konan Dev",
     address: "123 Rue de l'Exemple, 75001 Paris",
@@ -59,103 +83,65 @@ export const DEFAULT_QUOTE_DATA: QuoteDataState = {
     paymentDetails: "IBAN: FR76 XXXX XXXX XXXX XXXX XXX\nBIC: XXXX",
     terms: "50% d'acompte requis pour démarrer les travaux.",
   },
-  items: [
-    {
-      id: "1",
-      title: "",
-      subtitle: "",
-      quantity: 1,
-      unitPriceEuros: 0,
-    },
-  ],
+  items: [{ id: "1", title: "", subtitle: "", quantity: 1, unitPriceEuros: 0 }],
   financials: { vatRatePercent: 20, discountAmountEuros: 0 },
 };
 
-// --- Définition de notre Store Zustand ---
 interface QuoteStore {
-  /**
-   * La "base de données" : liste de tous les devis sauvegardés.
-   */
   quotes: QuoteDataState[];
-  /**
-   * Le "formulaire" : devis actuellement en cours d'édition sur /creer.
-   */
   activeQuote: QuoteDataState;
+  userFolders: string[];
 
-  // --- ACTIONS ---
-
-  /**
-   * Met à jour n'importe quel champ du devis actif.
-   * C'est le "cerveau" de la page /creer.
-   */
   updateActiveQuoteField: (
     group: keyof QuoteDataState,
     field: string,
-    value: string | number
+    value: any
   ) => void;
-
-  /**
-   * Met à jour une ligne d'article dans le devis actif.
-   */
   updateActiveLineItem: (
     index: number,
     field: keyof LineItem,
-    value: LineItem[keyof LineItem]
+    value: any
   ) => void;
-
-  /**
-   * Ajoute une nouvelle ligne vide au devis actif.
-   */
   addActiveLineItem: () => void;
-
-  /**
-   * Supprime une ligne du devis actif.
-   */
   removeActiveLineItem: (index: number) => void;
-
-  /**
-   * Réinitialise le devis actif à un état vide (pour un nouveau devis).
-   */
   resetActiveQuote: () => void;
-
-  /**
-   * Sauvegarde le devis actif dans la liste des devis (page /mes-devis).
-   * Gère à la fois l'ajout (nouveau) et la mise à jour (existant).
-   */
-  saveActiveQuoteToList: () => void;
-
-  /**
-   * Charge un devis existant de la liste vers l'éditeur (/creer).
-   */
   loadQuoteForEditing: (quoteNumber: string) => void;
 
-  /**
-   * Supprime un devis de la liste principale (/mes-devis).
-   */
+  saveActiveQuoteToList: () => void;
   deleteQuoteFromList: (quoteNumber: string) => void;
+
+  toggleFavorite: (quoteNumber: string) => void;
+  moveToFolder: (quoteNumber: string, folderName: string | null) => void;
+  updateQuoteStatus: (quoteNumber: string, status: QuoteStatus) => void;
+
+  createFolder: (folderName: string) => void;
+  deleteFolder: (folderName: string) => void;
+  renameFolder: (oldName: string, newName: string) => void; // <--- NOUVEAU
 }
 
-/**
- * Notre hook global.
- * Il est "persisté" (sauvegardé) dans le localStorage.
- */
 export const useQuoteStore = create(
   persist<QuoteStore>(
     (set, get) => ({
-      // --- ÉTAT (STATE) ---
       quotes: [],
       activeQuote: DEFAULT_QUOTE_DATA,
-
-      // --- IMPLÉMENTATION DES ACTIONS ---
+      userFolders: ["Clients VIP", "Projets Web", "Consulting"],
 
       updateActiveQuoteField: (group, field, value) =>
         set((state) => ({
           activeQuote: {
             ...state.activeQuote,
             [group]: {
-              ...state.activeQuote[group as keyof QuoteDataState],
+              ...state.activeQuote[group as keyof any],
               [field]: value,
             },
+            meta:
+              group === "meta"
+                ? {
+                    ...state.activeQuote.meta,
+                    updatedAt: getISODate(),
+                    [field]: value,
+                  }
+                : { ...state.activeQuote.meta, updatedAt: getISODate() },
           },
         })),
 
@@ -164,7 +150,11 @@ export const useQuoteStore = create(
           const newItems = [...state.activeQuote.items];
           newItems[index] = { ...newItems[index], [field]: value };
           return {
-            activeQuote: { ...state.activeQuote, items: newItems },
+            activeQuote: {
+              ...state.activeQuote,
+              items: newItems,
+              meta: { ...state.activeQuote.meta, updatedAt: getISODate() },
+            },
           };
         }),
 
@@ -197,12 +187,15 @@ export const useQuoteStore = create(
         set({
           activeQuote: {
             ...DEFAULT_QUOTE_DATA,
-            // On génère un nouveau numéro unique pour ce nouveau devis
+            meta: {
+              ...DEFAULT_QUOTE_DATA.meta,
+              createdAt: getISODate(),
+              updatedAt: getISODate(),
+            },
             quote: {
               ...DEFAULT_QUOTE_DATA.quote,
               number: generateQuoteNumber(),
             },
-            // On réinitialise les items à un seul item vide
             items: [
               {
                 id: "1",
@@ -216,30 +209,31 @@ export const useQuoteStore = create(
         });
       },
 
+      loadQuoteForEditing: (quoteNumber) => {
+        const quoteToLoad = get().quotes.find(
+          (q) => q.quote.number === quoteNumber
+        );
+        if (quoteToLoad)
+          set({ activeQuote: JSON.parse(JSON.stringify(quoteToLoad)) });
+      },
+
       saveActiveQuoteToList: () => {
         const activeQuote = get().activeQuote;
         const quotes = get().quotes;
         const existingIndex = quotes.findIndex(
           (q) => q.quote.number === activeQuote.quote.number
         );
+        const quoteToSave = {
+          ...activeQuote,
+          meta: { ...activeQuote.meta, updatedAt: getISODate() },
+        };
 
         if (existingIndex > -1) {
-          // Mettre à jour le devis existant
           const updatedQuotes = [...quotes];
-          updatedQuotes[existingIndex] = activeQuote;
-          set({ quotes: updatedQuotes });
+          updatedQuotes[existingIndex] = quoteToSave;
+          set({ quotes: updatedQuotes, activeQuote: quoteToSave });
         } else {
-          // Ajouter un nouveau devis
-          set({ quotes: [...quotes, activeQuote] });
-        }
-      },
-
-      loadQuoteForEditing: (quoteNumber) => {
-        const quoteToLoad = get().quotes.find(
-          (q) => q.quote.number === quoteNumber
-        );
-        if (quoteToLoad) {
-          set({ activeQuote: quoteToLoad });
+          set({ quotes: [...quotes, quoteToSave], activeQuote: quoteToSave });
         }
       },
 
@@ -247,9 +241,67 @@ export const useQuoteStore = create(
         set((state) => ({
           quotes: state.quotes.filter((q) => q.quote.number !== quoteNumber),
         })),
+
+      toggleFavorite: (quoteNumber) =>
+        set((state) => ({
+          quotes: state.quotes.map((q) =>
+            q.quote.number === quoteNumber
+              ? { ...q, meta: { ...q.meta, isFavorite: !q.meta.isFavorite } }
+              : q
+          ),
+        })),
+
+      moveToFolder: (quoteNumber, folderName) =>
+        set((state) => ({
+          quotes: state.quotes.map((q) =>
+            q.quote.number === quoteNumber
+              ? { ...q, meta: { ...q.meta, folder: folderName } }
+              : q
+          ),
+        })),
+
+      updateQuoteStatus: (quoteNumber, status) =>
+        set((state) => ({
+          quotes: state.quotes.map((q) =>
+            q.quote.number === quoteNumber
+              ? { ...q, meta: { ...q.meta, status: status } }
+              : q
+          ),
+        })),
+
+      // --- GESTION DES DOSSIERS ---
+
+      createFolder: (folderName) =>
+        set((state) => {
+          if (state.userFolders.includes(folderName)) return state;
+          return { userFolders: [...state.userFolders, folderName] };
+        }),
+
+      deleteFolder: (folderName) =>
+        set((state) => ({
+          userFolders: state.userFolders.filter((f) => f !== folderName),
+          quotes: state.quotes.map((q) =>
+            q.meta.folder === folderName
+              ? { ...q, meta: { ...q.meta, folder: null } }
+              : q
+          ),
+        })),
+
+      // NOUVELLE FONCTION DE RENOMMAGE
+      renameFolder: (oldName, newName) =>
+        set((state) => ({
+          // 1. Met à jour le nom dans la liste des dossiers
+          userFolders: state.userFolders.map((f) =>
+            f === oldName ? newName : f
+          ),
+          // 2. Met à jour TOUS les devis qui étaient dans ce dossier
+          quotes: state.quotes.map((q) =>
+            q.meta.folder === oldName
+              ? { ...q, meta: { ...q.meta, folder: newName } }
+              : q
+          ),
+        })),
     }),
-    {
-      name: "devis-express-store", // Le nom de la clé dans localStorage.
-    }
+    { name: "devis-express-store-v2" }
   )
 );
