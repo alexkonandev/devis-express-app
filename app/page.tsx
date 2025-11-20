@@ -21,9 +21,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-6xl px-6">
           <div className="flex h-16 items-center justify-between">
             <div className="font-bold text-lg tracking-tight flex items-center gap-2">
-              <div className="w-8 h-8 bg-neutral-900 rounded-lg flex items-center justify-center text-white font-mono text-xs">
-                DE
-              </div>
+              
               <span>DEVIS EXPRESS</span>
             </div>
             <div className="flex items-center gap-x-4">

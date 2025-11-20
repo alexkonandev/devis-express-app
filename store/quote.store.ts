@@ -10,9 +10,16 @@ export type QuoteStatus =
   | "rejected"
   | "archived";
 
+export interface Folder {
+  id: string;
+  name: string;
+  parentId: string | null; // null = root
+  createdAt: string;
+}
+
 export interface QuoteMeta {
   status: QuoteStatus;
-  folder: string | null;
+  folderId: string | null; // null = root
   isFavorite: boolean;
   createdAt: string;
   updatedAt: string;
@@ -59,10 +66,12 @@ const generateQuoteNumber = () => {
   return `DEV-${year}-${randomId}`;
 };
 
+const generateId = () => Math.random().toString(36).substring(2, 9);
+
 export const DEFAULT_QUOTE_DATA: QuoteDataState = {
   meta: {
     status: "draft",
-    folder: null,
+    folderId: null,
     isFavorite: false,
     createdAt: getISODate(),
     updatedAt: getISODate(),
@@ -90,8 +99,9 @@ export const DEFAULT_QUOTE_DATA: QuoteDataState = {
 interface QuoteStore {
   quotes: QuoteDataState[];
   activeQuote: QuoteDataState;
-  userFolders: string[];
+  folders: Folder[]; // CHANGED: Array of Folder objects
 
+  // --- ACTIONS ---
   updateActiveQuoteField: (
     group: keyof QuoteDataState,
     field: string,
@@ -111,12 +121,17 @@ interface QuoteStore {
   deleteQuoteFromList: (quoteNumber: string) => void;
 
   toggleFavorite: (quoteNumber: string) => void;
-  moveToFolder: (quoteNumber: string, folderName: string | null) => void;
   updateQuoteStatus: (quoteNumber: string, status: QuoteStatus) => void;
+  duplicateQuote: (quoteNumber: string) => void;
 
-  createFolder: (folderName: string) => void;
-  deleteFolder: (folderName: string) => void;
-  renameFolder: (oldName: string, newName: string) => void; // <--- NOUVEAU
+  // --- GESTION AVANCÉE DES DOSSIERS & MOUVEMENTS ---
+  createFolder: (name: string, parentId: string | null) => void;
+  deleteFolder: (folderId: string) => void;
+  renameFolder: (folderId: string, newName: string) => void;
+  
+  // Drag & Drop Actions
+  moveQuoteToFolder: (quoteNumber: string, targetFolderId: string | null) => void;
+  moveFolderToFolder: (folderId: string, targetParentId: string | null) => void;
 }
 
 export const useQuoteStore = create(
@@ -124,7 +139,7 @@ export const useQuoteStore = create(
     (set, get) => ({
       quotes: [],
       activeQuote: DEFAULT_QUOTE_DATA,
-      userFolders: ["Clients VIP", "Projets Web", "Consulting"],
+      folders: [], // Initial empty folders
 
       updateActiveQuoteField: (group, field, value) =>
         set((state) => ({
@@ -223,17 +238,24 @@ export const useQuoteStore = create(
         const existingIndex = quotes.findIndex(
           (q) => q.quote.number === activeQuote.quote.number
         );
-        const quoteToSave = {
-          ...activeQuote,
-          meta: { ...activeQuote.meta, updatedAt: getISODate() },
-        };
+        
+        // We use the current activeQuote as the source of truth.
+        // We don't need to update activeQuote's timestamp here because 
+        // updateActiveQuoteField already does it on every change.
+        // We just want to sync the current state to the list.
+        const quoteToSave = { ...activeQuote };
 
         if (existingIndex > -1) {
           const updatedQuotes = [...quotes];
           updatedQuotes[existingIndex] = quoteToSave;
-          set({ quotes: updatedQuotes, activeQuote: quoteToSave });
+          // IMPORTANT: Do NOT update activeQuote here, otherwise it triggers 
+          // the auto-save useEffect in the component, causing an infinite loop.
+          set({ quotes: updatedQuotes });
         } else {
-          set({ quotes: [...quotes, quoteToSave], activeQuote: quoteToSave });
+          // If it's a new quote, we add it to the list.
+          // Here we might want to update activeQuote to ensure it's linked?
+          // But activeQuote is already the one we are saving.
+          set({ quotes: [...quotes, quoteToSave] });
         }
       },
 
@@ -251,15 +273,6 @@ export const useQuoteStore = create(
           ),
         })),
 
-      moveToFolder: (quoteNumber, folderName) =>
-        set((state) => ({
-          quotes: state.quotes.map((q) =>
-            q.quote.number === quoteNumber
-              ? { ...q, meta: { ...q.meta, folder: folderName } }
-              : q
-          ),
-        })),
-
       updateQuoteStatus: (quoteNumber, status) =>
         set((state) => ({
           quotes: state.quotes.map((q) =>
@@ -269,39 +282,92 @@ export const useQuoteStore = create(
           ),
         })),
 
-      // --- GESTION DES DOSSIERS ---
-
-      createFolder: (folderName) =>
+      duplicateQuote: (quoteNumber) =>
         set((state) => {
-          if (state.userFolders.includes(folderName)) return state;
-          return { userFolders: [...state.userFolders, folderName] };
+          const quoteToDuplicate = state.quotes.find(
+            (q) => q.quote.number === quoteNumber
+          );
+          if (!quoteToDuplicate) return state;
+
+          const newQuote = JSON.parse(JSON.stringify(quoteToDuplicate));
+          newQuote.quote.number = generateQuoteNumber();
+          newQuote.meta.createdAt = getISODate();
+          newQuote.meta.updatedAt = getISODate();
+          newQuote.meta.status = "draft";
+          newQuote.quote.issueDate = getTodayDate();
+          // Keep the same folder or move to root? Let's keep same folder for now.
+          // newQuote.meta.folderId = quoteToDuplicate.meta.folderId; 
+
+          return {
+            quotes: [...state.quotes, newQuote],
+          };
         }),
 
-      deleteFolder: (folderName) =>
+      // --- GESTION DES DOSSIERS (V3 - NESTED) ---
+
+      createFolder: (name, parentId) =>
         set((state) => ({
-          userFolders: state.userFolders.filter((f) => f !== folderName),
+          folders: [
+            ...state.folders,
+            {
+              id: generateId(),
+              name,
+              parentId,
+              createdAt: getISODate(),
+            },
+          ],
+        })),
+
+      deleteFolder: (folderId) =>
+        set((state) => {
+          // Recursive delete helper could be added here if needed
+          // For now, we just delete the folder. Items inside become "orphaned" or move to root?
+          // Let's move items to root for safety.
+          const quotesToUpdate = state.quotes.map((q) =>
+            q.meta.folderId === folderId
+              ? { ...q, meta: { ...q.meta, folderId: null } }
+              : q
+          );
+          
+          // Also delete subfolders recursively? Or move them to root?
+          // Let's delete subfolders for simplicity in this iteration, or we can implement recursive delete later.
+          // For now: simple delete.
+          return {
+            folders: state.folders.filter((f) => f.id !== folderId),
+            quotes: quotesToUpdate,
+          };
+        }),
+
+      renameFolder: (folderId, newName) =>
+        set((state) => ({
+          folders: state.folders.map((f) =>
+            f.id === folderId ? { ...f, name: newName } : f
+          ),
+        })),
+
+      // --- DRAG & DROP ACTIONS ---
+
+      moveQuoteToFolder: (quoteNumber, targetFolderId) =>
+        set((state) => ({
           quotes: state.quotes.map((q) =>
-            q.meta.folder === folderName
-              ? { ...q, meta: { ...q.meta, folder: null } }
+            q.quote.number === quoteNumber
+              ? { ...q, meta: { ...q.meta, folderId: targetFolderId } }
               : q
           ),
         })),
 
-      // NOUVELLE FONCTION DE RENOMMAGE
-      renameFolder: (oldName, newName) =>
-        set((state) => ({
-          // 1. Met à jour le nom dans la liste des dossiers
-          userFolders: state.userFolders.map((f) =>
-            f === oldName ? newName : f
-          ),
-          // 2. Met à jour TOUS les devis qui étaient dans ce dossier
-          quotes: state.quotes.map((q) =>
-            q.meta.folder === oldName
-              ? { ...q, meta: { ...q.meta, folder: newName } }
-              : q
-          ),
-        })),
+      moveFolderToFolder: (folderId, targetParentId) =>
+        set((state) => {
+          // Prevent moving a folder into itself or its children (Cycle detection)
+          if (folderId === targetParentId) return state;
+          
+          return {
+            folders: state.folders.map((f) =>
+              f.id === folderId ? { ...f, parentId: targetParentId } : f
+            ),
+          };
+        }),
     }),
-    { name: "devis-express-store-v2" }
+    { name: "devis-express-store-v3" } // New version key to reset store
   )
 );

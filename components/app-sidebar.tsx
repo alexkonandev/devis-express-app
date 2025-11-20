@@ -167,20 +167,21 @@ export function AppSidebar() {
           <div className="flex items-center gap-3 overflow-hidden">
             <Link
               href="/"
-              className="h-10 w-10 shrink-0 bg-neutral-900 rounded-xl flex items-center justify-center text-white font-bold font-mono shadow-lg shadow-neutral-500/20 cursor-pointer hover:bg-black transition-colors"
+              
             >
-              DE
-            </Link>
+             
+            
             {!isCollapsed && (
               <div className="flex flex-col animate-in fade-in duration-300">
-                <span className="text-sm font-bold text-neutral-900 truncate">
+                <span className=" font-bold text-neutral-900 truncate">
                   Devis Express
                 </span>
-                <span className="text-[10px] text-neutral-500 truncate">
+                <span className="text-[12px] text-neutral-500 truncate">
                   Plan Gratuit
                 </span>
               </div>
             )}
+            </Link>
           </div>
         </div>
 
