@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -28,7 +28,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 
-// --- 1. IMPORT DU COMPOSANT COMMAND PALETTE ---
+// 1. IMPORT DU STORE
+import { useQuoteStore } from "@/store/quote.store";
 import { SearchCommand } from "@/components/search-command";
 
 // --- TYPES ---
@@ -84,7 +85,8 @@ const NavItem = ({
 
             {!isCollapsed && (
               <>
-                {badge ? (
+                {/* Badge dynamique */}
+                {badge !== undefined && badge > 0 ? (
                   <span className="bg-neutral-200 text-neutral-600 text-[10px] px-1.5 py-0.5 rounded-md font-mono">
                     {badge}
                   </span>
@@ -129,15 +131,28 @@ const NavItem = ({
 export function AppSidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
-
-  // --- 2. ETAT POUR LA MODALE DE RECHERCHE ---
   const [isCommandOpen, setIsCommandOpen] = useState(false);
 
-  const checkActive = (path: string) => pathname.startsWith(path);
+  // 2. RECUPERATION DES DONNÉES RÉELLES
+  const { quotes, userFolders, activeQuote, createFolder } = useQuoteStore();
+
+  // 3. CALCULS DYNAMIQUES
+  const draftCount = useMemo(() => quotes.filter(q => q.meta.status === 'draft').length, [quotes]);
+  const usageCount = quotes.length;
+  const usageLimit = 10; // Limite arbitraire pour l'exemple "Freemium"
+  const usagePercent = Math.min((usageCount / usageLimit) * 100, 100);
+  
+  // Nom de l'entreprise (Fallback sur "Moi" si vide)
+  const userName = activeQuote?.company?.name || "Mon Entreprise";
+  const userInitials = userName.substring(0, 2).toUpperCase();
+
+  const checkActive = (path: string) => {
+      if (path === "/mes-devis" && pathname === "/mes-devis" && !window.location.search) return true;
+      return pathname.startsWith(path);
+  }
 
   return (
     <>
-      {/* --- 3. INJECTION DE LA MODALE (Invisible par défaut) --- */}
       <SearchCommand open={isCommandOpen} setOpen={setIsCommandOpen} />
 
       <aside
@@ -158,38 +173,34 @@ export function AppSidebar() {
           )}
         </button>
 
-        {/* 1. HEADER & TEAM */}
+        {/* HEADER */}
         <div
           className={`p-4 flex items-center ${
             isCollapsed ? "justify-center" : "justify-between"
           }`}
         >
-          <div className="flex items-center gap-3 overflow-hidden">
-            <Link
-              href="/"
-              
-            >
-             
-            
+          <Link href="/" className="flex items-center gap-3 overflow-hidden group">
+            <div className="h-10 w-10 shrink-0 bg-neutral-900 rounded-xl flex items-center justify-center text-white font-bold font-mono shadow-lg shadow-neutral-500/20 cursor-pointer group-hover:bg-black transition-colors">
+              DE
+            </div>
             {!isCollapsed && (
               <div className="flex flex-col animate-in fade-in duration-300">
-                <span className=" font-bold text-neutral-900 truncate">
+                <span className="font-bold text-neutral-900 truncate">
                   Devis Express
                 </span>
-                <span className="text-[12px] text-neutral-500 truncate">
-                  Plan Gratuit
+                <span className="text-[10px] text-neutral-500 truncate bg-neutral-200/50 px-1.5 rounded-sm w-fit">
+                  v1.0.0
                 </span>
               </div>
             )}
-            </Link>
-          </div>
+          </Link>
         </div>
 
-        {/* 2. SEARCH BAR CONNECTÉE */}
+        {/* SEARCH */}
         <div className="px-4 mb-4">
           {isCollapsed ? (
             <button
-              onClick={() => setIsCommandOpen(true)} // <-- ACTION
+              onClick={() => setIsCommandOpen(true)}
               className="w-full h-10 flex items-center justify-center rounded-lg hover:bg-neutral-200/50 text-neutral-500 transition-colors"
               title="Rechercher (Ctrl+K)"
             >
@@ -197,7 +208,7 @@ export function AppSidebar() {
             </button>
           ) : (
             <button
-              onClick={() => setIsCommandOpen(true)} // <-- ACTION
+              onClick={() => setIsCommandOpen(true)}
               className="w-full h-9 bg-white border border-neutral-200 rounded-lg px-3 flex items-center justify-between text-neutral-400 hover:border-neutral-300 hover:text-neutral-600 transition-all shadow-sm group"
             >
               <div className="flex items-center gap-2">
@@ -211,9 +222,9 @@ export function AppSidebar() {
           )}
         </div>
 
-        {/* 3. NAVIGATION PRINCIPALE */}
+        {/* NAVIGATION */}
         <ScrollArea className="flex-1 px-3 space-y-6">
-          {/* Groupe: Application */}
+          
           <div className="space-y-1">
             {!isCollapsed && (
               <h4 className="px-2 text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2 mt-2">
@@ -237,101 +248,100 @@ export function AppSidebar() {
               shortcut="E"
             />
             <NavItem
-              href="/notifications"
+              href="/mes-devis?folder=brouillons" // Lien vers filtre brouillon (à gérer dans la page list)
               icon={Bell}
-              label="Notifications"
-              isActive={checkActive("/notifications")}
+              label="Brouillons"
+              isActive={false}
               isCollapsed={isCollapsed}
-              badge={2}
+              badge={draftCount} // VRAI COMPTEUR
             />
           </div>
 
-          {/* Groupe: Accès Rapide */}
           {!isCollapsed && <Separator className="my-4 bg-neutral-200/60" />}
 
           <div className="space-y-1">
             {!isCollapsed && (
               <div className="flex items-center justify-between px-2 mb-2 mt-2">
                 <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
-                  Accès Rapide
+                  Vos Dossiers
                 </h4>
-                <button className="text-neutral-400 hover:text-neutral-900 transition-colors">
+                {/* Bouton création rapide dossier */}
+                <button onClick={() => createFolder("Nouveau dossier", null)} className="text-neutral-400 hover:text-neutral-900 transition-colors p-1 hover:bg-white rounded-md">
                   <Plus className="w-3 h-3" />
                 </button>
               </div>
             )}
 
-            <NavItem
-              href="/mes-devis?folder=projets-2025"
-              icon={Folder}
-              label="Projets 2025"
-              isActive={false}
-              isCollapsed={isCollapsed}
-            />
-            <NavItem
-              href="/mes-devis?folder=factures-payees"
-              icon={Folder}
-              label="Factures Payées"
-              isActive={false}
-              isCollapsed={isCollapsed}
-            />
+            {/* VRAIE LISTE DES DOSSIERS */}
+            {userFolders.map(folder => (
+                <NavItem
+                    key={folder.id}
+                    href={`/mes-devis?folder=${folder.name}`} // Lien réel vers le filtre
+                    icon={Folder}
+                    label={folder.name}
+                    isActive={false} // À améliorer si tu veux highlighter le dossier courant
+                    isCollapsed={isCollapsed}
+                />
+            ))}
+
+            {userFolders.length === 0 && !isCollapsed && (
+                <p className="px-2 text-[10px] text-neutral-400 italic">Aucun dossier</p>
+            )}
           </div>
 
           <div className="mt-auto"></div>
         </ScrollArea>
 
-        {/* 4. FOOTER & PROFILE */}
+        {/* FOOTER & PROFILE */}
         <div className="p-4 border-t border-neutral-200 bg-white/50">
-          {/* Quota Widget */}
+          
+          {/* VRAI WIDGET STATS */}
           {!isCollapsed && (
             <div className="mb-4 p-3 bg-neutral-100/50 rounded-xl border border-neutral-200/50">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-3 h-3 text-amber-500 fill-amber-500" />
                   <span className="text-xs font-semibold text-neutral-900">
-                    Devis Gratuits
+                    Utilisation
                   </span>
                 </div>
                 <span className="text-[10px] font-medium text-neutral-500">
-                  3/10
+                  {usageCount}/{usageLimit}
                 </span>
               </div>
               <Progress
-                value={30}
+                value={usagePercent}
                 className="h-1.5 bg-neutral-200"
-                indicatorClassName="bg-neutral-900"
+                indicatorClassName={usagePercent >= 100 ? "bg-red-500" : "bg-neutral-900"}
               />
-              <Button
-                variant="link"
-                className="h-auto p-0 text-[10px] text-blue-600 mt-2 w-full justify-start"
-              >
-                Passer en illimité →
-              </Button>
+              <div className="mt-2 text-[10px] text-neutral-400 text-center">
+                  {usageCount} devis créés
+              </div>
             </div>
           )}
 
-          {/* Profile Menu */}
+          {/* VRAI PROFIL (Basé sur les réglages) */}
           <div
             className={`flex items-center gap-3 ${
               isCollapsed ? "justify-center" : ""
             }`}
           >
-            <div className="relative">
+            <div className="relative group">
               <Avatar className="h-9 w-9 border border-neutral-200 cursor-pointer hover:ring-2 hover:ring-neutral-200 transition-all">
-                <AvatarFallback className="bg-gradient-to-tr from-blue-600 to-purple-600 text-white text-xs font-bold">
-                  AK
+                <AvatarFallback className="bg-neutral-900 text-white text-xs font-bold">
+                  {userInitials}
                 </AvatarFallback>
               </Avatar>
-              <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
+              <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"></div>
             </div>
 
             {!isCollapsed && (
               <div className="flex-1 overflow-hidden">
                 <p className="text-sm font-bold text-neutral-900 truncate">
-                  Alex Konan
+                  {userName}
                 </p>
-                <p className="text-xs text-neutral-500 truncate">
-                  Freelance Dev
+                <p className="text-[10px] text-neutral-500 truncate">
+                  Compte Local
                 </p>
               </div>
             )}
@@ -341,7 +351,7 @@ export function AppSidebar() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-neutral-400 hover:text-neutral-900"
+                  className="h-8 w-8 text-neutral-400 hover:text-neutral-900 hover:bg-white"
                 >
                   <Settings className="w-4 h-4" />
                 </Button>

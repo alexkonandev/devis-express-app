@@ -1,7 +1,9 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-// --- 1. TYPES ---
+// ============================================================================
+// 1. TYPES & INTERFACES
+// ============================================================================
 
 export type QuoteStatus =
   | "draft"
@@ -19,7 +21,8 @@ export interface Folder {
 
 export interface QuoteMeta {
   status: QuoteStatus;
-  folderId: string | null; // null = root
+  folderId: string | null; // Référence par ID (plus robuste)
+  folder: string | null;   // Référence par Nom (pour compatibilité UI existante)
   isFavorite: boolean;
   createdAt: string;
   updatedAt: string;
@@ -34,21 +37,57 @@ export interface LineItem {
   unitPriceEuros: number;
 }
 
-export interface QuoteDataState {
+export interface QuoteCompany {
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  siret?: string;
+}
+
+export interface QuoteClient {
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+}
+
+// La structure d'un Devis
+export interface Quote {
+  id?: string;
   meta: QuoteMeta;
-  company: { name: string; address: string; phone: string; email: string };
-  client: { name: string; address: string; phone: string; email: string };
+  company: QuoteCompany;
+  client: QuoteClient;
   quote: {
     number: string;
     issueDate: string;
     expiryDate: string;
-    paymentTerms: string;
-    paymentDetails: string;
-    terms: string;
+    paymentTerms: string; // ex: "30 jours"
+    terms: string;        // Mentions légales / Pied de page
   };
   items: LineItem[];
   financials: { vatRatePercent: number; discountAmountEuros: number };
 }
+
+// Les Réglages Globaux de l'Application
+export interface AppSettings {
+  companyName: string;
+  companyEmail: string;
+  companyPhone: string;
+  companyAddress: string;
+  companySiret: string;
+  quotePrefix: string;     // ex: "DEV-"
+  nextNumber: number;      // ex: 105
+  defaultVat: number;      // ex: 20
+  defaultTerms: string;    // Mentions légales par défaut
+}
+
+// Alias pour compatibilité
+export type QuoteDataState = Quote;
+
+// ============================================================================
+// 2. UTILITAIRES
+// ============================================================================
 
 const getISODate = () => new Date().toISOString();
 const getTodayDate = () => new Date().toISOString().split("T")[0];
@@ -57,105 +96,118 @@ const getFutureDate = (days: number) => {
   date.setDate(date.getDate() + days);
   return date.toISOString().split("T")[0];
 };
-
-const generateQuoteNumber = () => {
-  const year = new Date().getFullYear();
-  const randomId = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0");
-  return `DEV-${year}-${randomId}`;
-};
-
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
-export const DEFAULT_QUOTE_DATA: QuoteDataState = {
+// Générateur de numéro basé sur les réglages (ou par défaut)
+const generateQuoteNumber = (prefix = "DEV-", nextNum = 1) => {
+  const year = new Date().getFullYear();
+  // Format: PREFIX-2025-001
+  return `${prefix}${year}-${nextNum.toString().padStart(3, "0")}`;
+};
+
+export const DEFAULT_SETTINGS: AppSettings = {
+  companyName: "Mon Entreprise",
+  companyEmail: "contact@exemple.com",
+  companyPhone: "",
+  companyAddress: "",
+  companySiret: "",
+  quotePrefix: "D-",
+  nextNumber: 1,
+  defaultVat: 20,
+  defaultTerms: "Paiement à réception de facture. TVA non applicable, art. 293 B du CGI.",
+};
+
+export const DEFAULT_QUOTE_DATA: Quote = {
   meta: {
     status: "draft",
     folderId: null,
+    folder: null,
     isFavorite: false,
     createdAt: getISODate(),
     updatedAt: getISODate(),
     tags: [],
   },
   company: {
-    name: "Alex Konan Dev",
-    address: "123 Rue de l'Exemple, 75001 Paris",
-    phone: "+33 6 00 00 00 00",
-    email: "pro@devisexpress.com",
+    name: "",
+    address: "",
+    phone: "",
+    email: "",
   },
   client: { name: "", address: "", phone: "", email: "" },
   quote: {
-    number: generateQuoteNumber(),
+    number: "",
     issueDate: getTodayDate(),
     expiryDate: getFutureDate(30),
-    paymentTerms: "Paiement net à 30 jours.",
-    paymentDetails: "IBAN: FR76 XXXX XXXX XXXX XXXX XXX\nBIC: XXXX",
-    terms: "50% d'acompte requis pour démarrer les travaux.",
+    paymentTerms: "",
+    terms: "",
   },
   items: [{ id: "1", title: "", subtitle: "", quantity: 1, unitPriceEuros: 0 }],
   financials: { vatRatePercent: 20, discountAmountEuros: 0 },
 };
 
-interface QuoteStore {
-  quotes: QuoteDataState[];
-  activeQuote: QuoteDataState;
-  folders: Folder[]; // CHANGED: Array of Folder objects
+// ============================================================================
+// 3. STORE INTERFACE
+// ============================================================================
 
-  // --- ACTIONS ---
-  updateActiveQuoteField: (
-    group: keyof QuoteDataState,
-    field: string,
-    value: any
-  ) => void;
-  updateActiveLineItem: (
-    index: number,
-    field: keyof LineItem,
-    value: any
-  ) => void;
+interface QuoteStore {
+  quotes: Quote[];
+  activeQuote: Quote;
+  userFolders: Folder[]; // C'est ici qu'on corrige le nom !
+  settings: AppSettings; // Ajout des réglages
+
+  // --- ACTIONS ÉDITEUR ---
+  updateActiveQuoteField: (group: keyof Quote | "meta", field: string, value: any) => void;
+  updateActiveLineItem: (index: number, field: keyof LineItem, value: any) => void;
   addActiveLineItem: () => void;
   removeActiveLineItem: (index: number) => void;
-  resetActiveQuote: () => void;
+  
+  // --- ACTIONS CORE ---
+  resetActiveQuote: () => void; // Crée un nouveau devis basé sur les Settings
   loadQuoteForEditing: (quoteNumber: string) => void;
-
   saveActiveQuoteToList: () => void;
   deleteQuoteFromList: (quoteNumber: string) => void;
 
+  // --- ACTIONS LISTE ---
   toggleFavorite: (quoteNumber: string) => void;
   updateQuoteStatus: (quoteNumber: string, status: QuoteStatus) => void;
   duplicateQuote: (quoteNumber: string) => void;
 
-  // --- GESTION AVANCÉE DES DOSSIERS & MOUVEMENTS ---
-  createFolder: (name: string, parentId: string | null) => void;
-  deleteFolder: (folderId: string) => void;
-  renameFolder: (folderId: string, newName: string) => void;
+  // --- ACTIONS SETTINGS ---
+  updateSettings: (newSettings: Partial<AppSettings>) => void;
+
+  // --- ACTIONS DOSSIERS ---
+  createFolder: (name: string, parentId?: string | null) => void;
+  deleteFolder: (folderNameOrId: string) => void;
+  renameFolder: (oldNameOrId: string, newName: string) => void;
   
-  // Drag & Drop Actions
-  moveQuoteToFolder: (quoteNumber: string, targetFolderId: string | null) => void;
-  moveFolderToFolder: (folderId: string, targetParentId: string | null) => void;
+  // --- ACTIONS DRAG & DROP ---
+  moveQuoteToFolder: (quoteNumber: string, targetFolder: string | null) => void;
 }
+
+// ============================================================================
+// 4. STORE IMPLEMENTATION
+// ============================================================================
 
 export const useQuoteStore = create(
   persist<QuoteStore>(
     (set, get) => ({
       quotes: [],
       activeQuote: DEFAULT_QUOTE_DATA,
-      folders: [], // Initial empty folders
+      userFolders: [],
+      settings: DEFAULT_SETTINGS,
 
+      // --- MISE A JOUR CHAMPS ---
       updateActiveQuoteField: (group, field, value) =>
         set((state) => ({
           activeQuote: {
             ...state.activeQuote,
             [group]: {
-              ...state.activeQuote[group as keyof any],
+              ...state.activeQuote[group as keyof Quote],
               [field]: value,
             },
             meta:
               group === "meta"
-                ? {
-                    ...state.activeQuote.meta,
-                    updatedAt: getISODate(),
-                    [field]: value,
-                  }
+                ? { ...state.activeQuote.meta, updatedAt: getISODate(), [field]: value }
                 : { ...state.activeQuote.meta, updatedAt: getISODate() },
           },
         })),
@@ -179,13 +231,7 @@ export const useQuoteStore = create(
             ...state.activeQuote,
             items: [
               ...state.activeQuote.items,
-              {
-                id: new Date().getTime().toString(),
-                title: "",
-                subtitle: "",
-                quantity: 1,
-                unitPriceEuros: 0,
-              },
+              { id: generateId(), title: "", subtitle: "", quantity: 1, unitPriceEuros: 0 },
             ],
           },
         })),
@@ -198,7 +244,11 @@ export const useQuoteStore = create(
           },
         })),
 
+      // --- LOGIQUE INTELLIGENTE DE CRÉATION ---
       resetActiveQuote: () => {
+        const { settings } = get();
+        
+        // On crée un nouveau devis en utilisant les réglages par défaut
         set({
           activeQuote: {
             ...DEFAULT_QUOTE_DATA,
@@ -207,55 +257,56 @@ export const useQuoteStore = create(
               createdAt: getISODate(),
               updatedAt: getISODate(),
             },
-            quote: {
-              ...DEFAULT_QUOTE_DATA.quote,
-              number: generateQuoteNumber(),
+            company: {
+              name: settings.companyName,
+              email: settings.companyEmail,
+              phone: settings.companyPhone,
+              address: settings.companyAddress,
             },
-            items: [
-              {
-                id: "1",
-                title: "",
-                subtitle: "",
-                quantity: 1,
-                unitPriceEuros: 0,
-              },
-            ],
+            quote: {
+              number: generateQuoteNumber(settings.quotePrefix, settings.nextNumber),
+              issueDate: getTodayDate(),
+              expiryDate: getFutureDate(30),
+              paymentTerms: "",
+              terms: settings.defaultTerms,
+            },
+            financials: {
+                vatRatePercent: settings.defaultVat,
+                discountAmountEuros: 0
+            },
+            items: [{ id: generateId(), title: "", subtitle: "", quantity: 1, unitPriceEuros: 0 }],
           },
         });
       },
 
       loadQuoteForEditing: (quoteNumber) => {
-        const quoteToLoad = get().quotes.find(
-          (q) => q.quote.number === quoteNumber
-        );
-        if (quoteToLoad)
-          set({ activeQuote: JSON.parse(JSON.stringify(quoteToLoad)) });
+        const quoteToLoad = get().quotes.find((q) => q.quote.number === quoteNumber);
+        if (quoteToLoad) {
+            // Clone profond pour éviter les mutations directes sur la liste
+            set({ activeQuote: JSON.parse(JSON.stringify(quoteToLoad)) });
+        }
       },
 
       saveActiveQuoteToList: () => {
         const activeQuote = get().activeQuote;
         const quotes = get().quotes;
-        const existingIndex = quotes.findIndex(
-          (q) => q.quote.number === activeQuote.quote.number
-        );
+        const settings = get().settings;
+
+        const existingIndex = quotes.findIndex((q) => q.quote.number === activeQuote.quote.number);
         
-        // We use the current activeQuote as the source of truth.
-        // We don't need to update activeQuote's timestamp here because 
-        // updateActiveQuoteField already does it on every change.
-        // We just want to sync the current state to the list.
         const quoteToSave = { ...activeQuote };
 
         if (existingIndex > -1) {
+          // Mise à jour existant
           const updatedQuotes = [...quotes];
           updatedQuotes[existingIndex] = quoteToSave;
-          // IMPORTANT: Do NOT update activeQuote here, otherwise it triggers 
-          // the auto-save useEffect in the component, causing an infinite loop.
           set({ quotes: updatedQuotes });
         } else {
-          // If it's a new quote, we add it to the list.
-          // Here we might want to update activeQuote to ensure it's linked?
-          // But activeQuote is already the one we are saving.
-          set({ quotes: [...quotes, quoteToSave] });
+          // Création nouveau -> On incrémente le compteur de devis dans les settings !
+          set({ 
+              quotes: [...quotes, quoteToSave],
+              settings: { ...settings, nextNumber: settings.nextNumber + 1 }
+          });
         }
       },
 
@@ -284,90 +335,82 @@ export const useQuoteStore = create(
 
       duplicateQuote: (quoteNumber) =>
         set((state) => {
-          const quoteToDuplicate = state.quotes.find(
-            (q) => q.quote.number === quoteNumber
-          );
-          if (!quoteToDuplicate) return state;
+          const original = state.quotes.find((q) => q.quote.number === quoteNumber);
+          if (!original) return state;
 
-          const newQuote = JSON.parse(JSON.stringify(quoteToDuplicate));
-          newQuote.quote.number = generateQuoteNumber();
+          const newQuote = JSON.parse(JSON.stringify(original));
+          newQuote.quote.number = generateQuoteNumber(state.settings.quotePrefix, state.settings.nextNumber);
           newQuote.meta.createdAt = getISODate();
-          newQuote.meta.updatedAt = getISODate();
           newQuote.meta.status = "draft";
-          newQuote.quote.issueDate = getTodayDate();
-          // Keep the same folder or move to root? Let's keep same folder for now.
-          // newQuote.meta.folderId = quoteToDuplicate.meta.folderId; 
+          
+          // Incrémenter le compteur
+          const newSettings = { ...state.settings, nextNumber: state.settings.nextNumber + 1 };
 
           return {
             quotes: [...state.quotes, newQuote],
+            settings: newSettings
           };
         }),
 
-      // --- GESTION DES DOSSIERS (V3 - NESTED) ---
+      // --- SETTINGS ---
+      updateSettings: (newSettings) => 
+        set((state) => ({ settings: { ...state.settings, ...newSettings } })),
 
-      createFolder: (name, parentId) =>
+      // --- GESTION DOSSIERS ---
+
+      createFolder: (name, parentId = null) =>
         set((state) => ({
-          folders: [
-            ...state.folders,
-            {
-              id: generateId(),
-              name,
-              parentId,
-              createdAt: getISODate(),
-            },
+          userFolders: [
+            ...state.userFolders,
+            { id: generateId(), name, parentId, createdAt: getISODate() },
           ],
         })),
 
-      deleteFolder: (folderId) =>
+      deleteFolder: (folderNameOrId) =>
         set((state) => {
-          // Recursive delete helper could be added here if needed
-          // For now, we just delete the folder. Items inside become "orphaned" or move to root?
-          // Let's move items to root for safety.
-          const quotesToUpdate = state.quotes.map((q) =>
-            q.meta.folderId === folderId
-              ? { ...q, meta: { ...q.meta, folderId: null } }
+          // Supprime le dossier (par ID ou Nom pour compatibilité)
+          const updatedFolders = state.userFolders.filter(
+            (f) => f.id !== folderNameOrId && f.name !== folderNameOrId
+          );
+
+          // "Sortir" les devis du dossier supprimé (les remettre à la racine)
+          const updatedQuotes = state.quotes.map((q) =>
+            q.meta.folder === folderNameOrId || q.meta.folderId === folderNameOrId
+              ? { ...q, meta: { ...q.meta, folder: null, folderId: null } }
               : q
           );
           
-          // Also delete subfolders recursively? Or move them to root?
-          // Let's delete subfolders for simplicity in this iteration, or we can implement recursive delete later.
-          // For now: simple delete.
           return {
-            folders: state.folders.filter((f) => f.id !== folderId),
-            quotes: quotesToUpdate,
+            userFolders: updatedFolders,
+            quotes: updatedQuotes,
           };
         }),
 
-      renameFolder: (folderId, newName) =>
+      renameFolder: (oldNameOrId, newName) =>
         set((state) => ({
-          folders: state.folders.map((f) =>
-            f.id === folderId ? { ...f, name: newName } : f
+          userFolders: state.userFolders.map((f) =>
+            f.id === oldNameOrId || f.name === oldNameOrId 
+                ? { ...f, name: newName } 
+                : f
           ),
+          // Mettre à jour les références dans les devis
+          quotes: state.quotes.map(q => 
+            q.meta.folder === oldNameOrId 
+                ? { ...q, meta: { ...q.meta, folder: newName } }
+                : q
+          )
         })),
 
-      // --- DRAG & DROP ACTIONS ---
-
-      moveQuoteToFolder: (quoteNumber, targetFolderId) =>
+      moveQuoteToFolder: (quoteNumber, targetFolder) =>
         set((state) => ({
           quotes: state.quotes.map((q) =>
             q.quote.number === quoteNumber
-              ? { ...q, meta: { ...q.meta, folderId: targetFolderId } }
+              ? { ...q, meta: { ...q.meta, folder: targetFolder, folderId: targetFolder } }
               : q
           ),
         })),
 
-      moveFolderToFolder: (folderId, targetParentId) =>
-        set((state) => {
-          // Prevent moving a folder into itself or its children (Cycle detection)
-          if (folderId === targetParentId) return state;
-          
-          return {
-            folders: state.folders.map((f) =>
-              f.id === folderId ? { ...f, parentId: targetParentId } : f
-            ),
-          };
-        }),
     }),
-    { name: "devis-express-store-v3" } // New version key to reset store
+    { name: "devis-express-store-v3" }
   )
 );
