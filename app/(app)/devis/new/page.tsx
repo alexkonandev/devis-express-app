@@ -35,38 +35,51 @@ const calculateQuoteTotals = (quote: any) => {
   };
 };
 
-export default function CreateQuotePage() {
+interface CreateQuotePageProps {
+  params: {
+    id: string;
+  };
+}
+
+export default function CreateQuotePage({ params }: CreateQuotePageProps) {
   const router = useRouter();
   const {
     activeQuote,
-    folders,
+    userFolders,
     updateActiveQuoteField,
     updateActiveLineItem,
     addActiveLineItem,
     removeActiveLineItem,
     resetActiveQuote,
+    loadQuoteForEditing,
     saveActiveQuoteToList,
   } = useQuoteStore();
 
   const [isSaving, setIsSaving] = useState(false);
   const [viewMode, setViewMode] = useState<"edit" | "preview">("edit");
   const [zoom, setZoom] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Initialisation
+  // Initialisation based on ID
   useEffect(() => {
-    if (!activeQuote) resetActiveQuote();
-  }, []);
+    if (params.id === "new") {
+      resetActiveQuote();
+    } else {
+      loadQuoteForEditing(params.id);
+    }
+    setIsLoading(false);
+  }, [params.id, resetActiveQuote, loadQuoteForEditing]);
 
   // Auto-save
   useEffect(() => {
-    if (!activeQuote) return;
+    if (!activeQuote || isLoading) return;
     setIsSaving(true);
     const t = setTimeout(() => {
       saveActiveQuoteToList();
       setIsSaving(false);
     }, 800);
     return () => clearTimeout(t);
-  }, [activeQuote, saveActiveQuoteToList]);
+  }, [activeQuote, saveActiveQuoteToList, isLoading]);
 
   // Debounce activeQuote for PDF generation to avoid flickering
   const debouncedQuote = useDebounce(activeQuote, 1000);
@@ -106,7 +119,7 @@ export default function CreateQuotePage() {
     }
   };
 
-  if (!activeQuote)
+  if (isLoading || !activeQuote)
     return (
       <div className="h-full flex items-center justify-center bg-neutral-50">
         <Loader2 className="animate-spin text-neutral-400" />
@@ -118,7 +131,7 @@ export default function CreateQuotePage() {
       header={
         <EditorHeader
           activeQuote={activeQuote}
-          folders={folders}
+          folders={userFolders}
           viewMode={viewMode}
           setViewMode={setViewMode}
           onSave={handleExportPDF}
@@ -130,7 +143,7 @@ export default function CreateQuotePage() {
       sidebar={
         <EditorSidebar
           activeQuote={activeQuote}
-          folders={folders}
+          folders={userFolders}
           onUpdateField={updateActiveQuoteField as any}
           onSave={handleExportPDF}
           isSaving={isSaving}

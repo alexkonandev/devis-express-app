@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppHeader } from "@/components/app-header";
 
 interface SoftwareLayoutProps {
   children: React.ReactNode;
@@ -9,22 +9,17 @@ interface SoftwareLayoutProps {
 
 export default function SoftwareLayout({ children }: SoftwareLayoutProps) {
   return (
-    /**
-     * CONTAINER PRINCIPAL
-     * h-screen : Force la hauteur à 100% du viewport
-     * overflow-hidden : Empêche le scroll sur le body entier (comportement app native)
-     */
-    <div className="flex h-screen w-screen overflow-hidden bg-neutral-50 font-sans text-neutral-900 selection:bg-neutral-900 selection:text-white">
-      {/* ZONE 1 : RAIL DE NAVIGATION (Fixe à gauche) */}
-      <AppSidebar />
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-neutral-50 font-sans text-neutral-900 selection:bg-neutral-900 selection:text-white">
+      {/* TOP BAR (Fixe en haut) */}
+      <div className="flex-none z-50">
+        <AppHeader />
+      </div>
 
-      {/* ZONE 2 : ESPACE DE TRAVAIL (Le reste de l'écran) */}
-      <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
-        {/* Ombre portée subtile pour séparer le rail du contenu */}
-        <div className="absolute left-0 top-0 bottom-0 w-px bg-transparent shadow-[4px_0_24px_rgba(0,0,0,0.04)] z-40 pointer-events-none" />
-
-        {/* C'est ici que les pages (page.tsx) sont injectées */}
-        {children}
+      {/* MAIN CONTENT (Pleine largeur) */}
+      <main className="flex-1 flex flex-col min-h-0 w-full relative overflow-hidden">
+        <div className="flex-1 overflow-y-auto scroll-smooth">
+          {children}
+        </div>
       </main>
     </div>
   );
