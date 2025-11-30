@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Folder,
   CornerDownLeft,
+  Loader2,
 } from "lucide-react";
 
 import {
@@ -24,10 +25,13 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command";
-import { Input } from "@/components/ui/input"; // Assurez-vous d'avoir ce composant UI
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { createFolderAction, searchDevisAction } from "@/app/(app)/devis/actions";
+import { useDebounce } from "@/hooks/use-debounce";
 
-import { useQuoteStore } from "@/store/quote.store";
+// On remplace le store par l'action serveur et le hook debounce
+
 
 interface SearchCommandProps {
   open: boolean;
@@ -37,20 +41,43 @@ interface SearchCommandProps {
 export function SearchCommand({ open, setOpen }: SearchCommandProps) {
   const router = useRouter();
 
-  // Gestion des "Pages" dans la commande (root | new-folder)
+  // --- ÉTAT DE RECHERCHE ---
+  const [query, setQuery] = React.useState("");
+  const [results, setResults] = React.useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
+
+  // Debounce pour ne pas surcharger la DB (300ms)
+  const debouncedQuery = useDebounce(query, 300);
+
+  // --- ÉTAT NAVIGATION INTERNE ---
   const [page, setPage] = React.useState<"root" | "new-folder">("root");
   const [newFolderName, setNewFolderName] = React.useState("");
-
-  const { quotes, loadQuoteForEditing, resetActiveQuote, createFolder } =
-    useQuoteStore();
 
   // Reset de l'état quand on ferme/ouvre
   React.useEffect(() => {
     if (open) {
       setPage("root");
       setNewFolderName("");
+      setQuery("");
+      setResults([]);
     }
   }, [open]);
+
+  // --- EFFET DE RECHERCHE ---
+  React.useEffect(() => {
+    const performSearch = async () => {
+      if (debouncedQuery.length < 2) {
+        setResults([]);
+        return;
+      }
+      setIsSearching(true);
+      const data = await searchDevisAction(debouncedQuery);
+      setResults(data);
+      setIsSearching(false);
+    };
+
+    performSearch();
+  }, [debouncedQuery]);
 
   // Raccourci Clavier Global
   React.useEffect(() => {
@@ -64,33 +91,32 @@ export function SearchCommand({ open, setOpen }: SearchCommandProps) {
     return () => document.removeEventListener("keydown", down);
   }, [setOpen]);
 
-  // Helper pour fermer
   const closeCommand = React.useCallback(() => {
     setOpen(false);
   }, [setOpen]);
 
-  // --- ACTIONS ---
+  // --- HANDLERS ---
 
-  const handleOpenQuote = (quoteNumber: string) => {
-    loadQuoteForEditing(quoteNumber);
+  const handleOpenQuote = (id: string) => {
     closeCommand();
-    router.push("/creer");
+    // Redirection vers la route dynamique
+    router.push(`/devis/${id}`);
   };
 
   const handleNewQuote = () => {
-    resetActiveQuote();
     closeCommand();
-    router.push("/creer");
+    // Redirection vers la route de création
+    router.push("/devis/new");
   };
 
-  // Validation de la création de dossier
-  const submitNewFolder = () => {
+  const submitNewFolder = async () => {
     if (!newFolderName.trim()) return;
 
-    createFolder(newFolderName.trim());
+    await createFolderAction(newFolderName.trim());
+
     closeCommand();
-    // Redirection vers le dashboard (optionnel, ou on reste où on est)
-    router.push("/mes-devis");
+    // Feedback ou refresh
+    router.refresh();
   };
 
   return (
@@ -98,45 +124,67 @@ export function SearchCommand({ open, setOpen }: SearchCommandProps) {
       {/* VUE 1 : RACINE (RECHERCHE) */}
       {page === "root" && (
         <>
-          <CommandInput placeholder="Rechercher un document, une action..." />
+          <CommandInput
+            placeholder="Rechercher un document, une action..."
+            value={query}
+            onValueChange={setQuery}
+          />
           <CommandList>
-            <CommandEmpty>
-              <div className="flex flex-col items-center justify-center py-6 text-neutral-500">
-                <Search className="h-8 w-8 mb-2 opacity-20" />
-                <p className="text-sm">Aucun résultat.</p>
+            {/* ETAT DE CHARGEMENT */}
+            {isSearching && (
+              <div className="flex items-center justify-center py-4 text-neutral-400">
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                <span className="text-xs">Recherche en cours...</span>
               </div>
-            </CommandEmpty>
+            )}
 
-            {/* DOCUMENTS */}
-            {quotes.length > 0 && (
-              <CommandGroup heading="Documents récents">
-                {quotes.map((quote) => (
+            {/* AUCUN RÉSULTAT */}
+            {!isSearching && results.length === 0 && query.length > 1 && (
+              <CommandEmpty>
+                <div className="flex flex-col items-center justify-center py-6 text-neutral-500">
+                  <Search className="h-8 w-8 mb-2 opacity-20" />
+                  <p className="text-sm">Aucun résultat.</p>
+                </div>
+              </CommandEmpty>
+            )}
+
+            {/* RÉSULTATS DE RECHERCHE DYNAMIQUE */}
+            {results.length > 0 && (
+              <CommandGroup heading="Documents trouvés">
+                {results.map((quote) => (
                   <CommandItem
-                    key={quote.quote.number}
-                    value={`${quote.quote.number} ${quote.client.name}`}
-                    onSelect={() => handleOpenQuote(quote.quote.number)}
-                    className="cursor-pointer"
+                    key={quote.id}
+                    value={`${quote.number} ${quote.clientName}`}
+                    onSelect={() => handleOpenQuote(quote.id)}
+                    className="cursor-pointer group"
                   >
                     <File className="mr-2 h-4 w-4 text-neutral-400" />
                     <div className="flex flex-col flex-1 min-w-0">
                       <span className="font-medium text-sm truncate">
-                        {quote.client.name || "Brouillon sans nom"}
+                        {quote.clientName || "Client inconnu"}
                       </span>
                       <div className="flex items-center gap-2 text-[10px] text-neutral-400">
                         <span className="flex items-center gap-0.5 bg-neutral-100 px-1 rounded">
-                          <Hash className="w-2.5 h-2.5" /> {quote.quote.number}
+                          <Hash className="w-2.5 h-2.5" /> {quote.number}
+                        </span>
+                        <span>•</span>
+                        <span>
+                          {new Intl.NumberFormat("fr-FR", {
+                            style: "currency",
+                            currency: "EUR",
+                          }).format(quote.total)}
                         </span>
                       </div>
                     </div>
-                    <ArrowRight className="ml-2 h-3 w-3 text-neutral-300 opacity-0 group-aria-selected:opacity-100" />
+                    <ArrowRight className="ml-2 h-3 w-3 text-neutral-300 opacity-0 group-aria-selected:opacity-100 transition-opacity" />
                   </CommandItem>
                 ))}
               </CommandGroup>
             )}
 
-            {quotes.length > 0 && <CommandSeparator />}
+            <CommandSeparator />
 
-            {/* ACTIONS */}
+            {/* ACTIONS STATIQUES */}
             <CommandGroup heading="Actions rapides">
               <CommandItem
                 onSelect={handleNewQuote}
@@ -147,7 +195,6 @@ export function SearchCommand({ open, setOpen }: SearchCommandProps) {
                 <CommandShortcut>⌘N</CommandShortcut>
               </CommandItem>
 
-              {/* ACTION: CHANGER DE VUE */}
               <CommandItem
                 onSelect={() => {
                   setPage("new-folder");
@@ -166,7 +213,6 @@ export function SearchCommand({ open, setOpen }: SearchCommandProps) {
       {/* VUE 2 : CRÉATION DOSSIER (INPUT) */}
       {page === "new-folder" && (
         <div className="p-4">
-          {/* Header Retour */}
           <div className="flex items-center gap-2 mb-4 text-sm text-neutral-400">
             <button
               onClick={() => setPage("root")}
@@ -180,11 +226,10 @@ export function SearchCommand({ open, setOpen }: SearchCommandProps) {
             </span>
           </div>
 
-          {/* Champ de saisie */}
           <div className="flex gap-2">
             <Input
               autoFocus
-              placeholder="Nom du dossier (ex: Projets 2024)"
+              placeholder="Nom du dossier (ex: Projets 2025)"
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
               onKeyDown={(e) => {

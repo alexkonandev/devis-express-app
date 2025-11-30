@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model User {
+  id        String    @id @default(cuid()) 
+  email     String    @unique 
+  
+  // Identité Entreprise
+  companyName    String?
+  companyEmail   String?
+  companyPhone   String?
+  companyAddress String?
+  companySiret   String?   // NOUVEAU
+  companyWebsite String?   // NOUVEAU (Pour remplir l'espace)
+
+  // Paramètres de Facturation (Automatisation)
+  quotePrefix    String    @default("DEV-")
+  nextQuoteNumber Int      @default(1)
+  defaultVatRate Float     @default(20.0)
+  defaultTerms   String?   // Mentions légales par défaut
+
+  Clients   Client[]
+  Devis     Devis[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("users")
+}
+
+// 2. CLIENT (Destinataire réutilisable du devis)
+model Client {
+  id        String    @id @default(cuid())
+  userId    String    // Clé étrangère vers l'utilisateur
+  user      User      @relation(fields: [userId], references: [id])
+
+  name      String
+  email     String?
+  address   String?
+
+  Devis     Devis[]   // Le client reçoit plusieurs devis
+  
+  // Un utilisateur ne peut pas avoir deux clients avec le même nom (pour l'efficacité)
+  @@unique([userId, name]) 
+  @@map("clients")
+}
+
+// 3. DEVIS (Document Principal et Transaction)
+model Devis {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  
+  clientId    String    
+  client      Client    @relation(fields: [clientId], references: [id])
+  
+  // Champs critiques
+  number      String    @unique
+  issueDate   DateTime  
+  
+  // NOUVEAU : Gestion complète du cycle de vie
+  // Valeurs possibles : 'draft', 'sent', 'accepted', 'rejected', 'archived'
+  status      String    @default("draft") 
+  
+  // NOUVEAU : Date d'échéance (pour les alertes KPI)
+  validityDate DateTime?
+
+  totalTTC    Float     
+
+  // Champs Financiers
+  vatRatePercent      Float @default(20) 
+  discountAmountEuros Float @default(0)  
+
+  // Contenu
+  itemsData   Json      
+  terms       String?   
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@map("devis")
+}

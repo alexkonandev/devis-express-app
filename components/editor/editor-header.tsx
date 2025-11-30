@@ -44,37 +44,28 @@ export const EditorHeader = ({
   const currentFolder = folders.find((f) => f.id === activeQuote.meta.folderId);
 
   return (
-    <header className="h-14 bg-white/80 backdrop-blur-md border-b border-neutral-200 px-6 flex items-center justify-between shrink-0 sticky top-0 z-40">
+    <header className="h-16 bg-white/80 backdrop-blur-md border-b border-neutral-200 px-6 flex items-center justify-between shrink-0 sticky top-0 z-40">
       {/* 1. GAUCHE : Identité du Devis (Style "App Pro") */}
       <div className="flex items-center gap-4">
-        {/* Retour + ID du Devis */}
-        <Link href="/devis" className="flex items-center gap-2 group">
-          <div className="p-1.5 bg-neutral-100 rounded-md border border-neutral-200/50 group-hover:bg-neutral-200 transition-colors">
-            <FileText className="w-3.5 h-3.5 text-neutral-600" />
-          </div>
-          <h1 className=" text-neutral-900 tracking-tight">
-           Mon Editeur
-          </h1>
-        </Link>
-
-        {/* Séparateur */}
-        <div className="h-4 w-px bg-neutral-200" />
-
-        {/* Badge Client & Dossier */}
-        <div className="flex items-center gap-2 bg-neutral-50 px-2.5 py-1 rounded-md border border-neutral-200/60">
-          <span className="text-xs font-medium text-neutral-600 truncate max-w-[150px]">
-            Création et édition de devis
+        {/* Zoom Controls */}
+        <div className="flex items-center gap-1 bg-neutral-50 rounded-md border border-neutral-200 p-1">
+          <button
+            onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
+            className="p-1 hover:bg-white hover:shadow-sm rounded text-neutral-500"
+          >
+            <ZoomOut className="w-4 h-4" />
+          </button>
+          <span className="text-xs font-mono w-12 text-center">
+            {Math.round(zoom * 100)}%
           </span>
-
-          {currentFolder && (
-            <>
-              <span className="text-neutral-300 text-[10px]">•</span>
-              <span className="text-[10px] font-mono text-neutral-400">
-                {currentFolder.name}
-              </span>
-            </>
-          )}
+          <button
+            onClick={() => setZoom(Math.min(1.5, zoom + 0.1))}
+            className="p-1 hover:bg-white hover:shadow-sm rounded text-neutral-500"
+          >
+            <ZoomIn className="w-4 h-4" />
+          </button>
         </div>
+       
       </div>
 
       {/* Center Controls */}
@@ -105,25 +96,6 @@ export const EditorHeader = ({
 
       {/* Right Actions */}
       <div className="flex items-center gap-4">
-        {/* Zoom Controls */}
-        <div className="flex items-center gap-1 bg-neutral-50 rounded-md border border-neutral-200 p-1">
-          <button
-            onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-            className="p-1 hover:bg-white hover:shadow-sm rounded text-neutral-500"
-          >
-            <ZoomOut className="w-4 h-4" />
-          </button>
-          <span className="text-xs font-mono w-12 text-center">
-            {Math.round(zoom * 100)}%
-          </span>
-          <button
-            onClick={() => setZoom(Math.min(1.5, zoom + 0.1))}
-            className="p-1 hover:bg-white hover:shadow-sm rounded text-neutral-500"
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>
-        </div>
-
         <Separator orientation="vertical" className="h-6" />
 
         <div className="flex items-center gap-2 text-xs font-medium text-neutral-500">

@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 // Importer Figtree et JetBrains Mono
 import { Figtree, JetBrains_Mono } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
+import { frFR } from '@clerk/localizations' // Optionnel : pour avoir l'interface en Français
 import "./globals.css";
+import "dotenv/config";   
 
 // Configurer Figtree comme police principale (sans-serif)
 const figtree = Figtree({
@@ -29,8 +32,10 @@ export default function RootLayout({
 }) {
   return (
     // Appliquer les deux variables à la balise <html>
-    <html lang="fr" className={`${figtree.variable} ${jetbrains.variable}`}>
-      <body>{children}</body>
-    </html>
+    <ClerkProvider localization={frFR}>
+      <html lang="fr" className={`${figtree.variable} ${jetbrains.variable}`}>
+        <body>{children}</body>
+      </html>
+    </ClerkProvider>
   );
 }
