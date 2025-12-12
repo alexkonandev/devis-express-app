@@ -12,7 +12,32 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+// Schéma pour la bibliothèque de modèles (Ontologie)
+model ServiceTemplate {
+  id          String   @id @default(cuid())
+  category    String   // Tech, Design, Marketing, etc.
+  subcategory String   // DevOps, SEO, Branding...
+  title       String   // Titre interne
+  
+  // Données riches stockées en JSON structuré
+  // Contient: headline, description, key_benefits
+  salesCopy      Json   
+  
+  // Contient: included[], excluded[]
+  technicalScope Json   
+  
+  // Contient: suggested_model, tiers { junior, senior, expert }
+  pricing        Json   
+  
+  // Contient: trend, insight
+  marketContext  Json   
 
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([subcategory])
+}
 
 model User {
   id        String    @id @default(cuid()) 
@@ -34,26 +59,55 @@ model User {
 
   Clients   Client[]
   Devis     Devis[]
-  
+ ServiceItems ServiceItem[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
   @@map("users")
 }
+// 4. SERVICE ITEM (Catalogue des Prestations)
+model ServiceItem {
+  id              String    @id @default(cuid())
+  userId          String    // Clé étrangère vers l'utilisateur
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title           String    // Ex: Création Site Vitrine (Nom affiché dans le Devis)
+  description     String?   // Le 'Boilerplate' standard injecté dans l'éditeur
+  unitPriceEuros  Float     // Prix unitaire HT (Ex: 1500.00)
+  defaultQuantity Float     @default(1) // Quantité par défaut (utile pour TJM, Packs, etc.)
+  isTaxable       Boolean   @default(true) // Si la TVA s'applique par défaut
 
-// 2. CLIENT (Destinataire réutilisable du devis)
+  // Champs de Monétisation / Organisation
+  category        String?   // Ex: Development, Consulting (Pour filtres Premium)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  // Garantit que le catalogue reste propre
+  @@unique([userId, title]) 
+  @@map("service_items")
+}
+// 2. CLIENT (Destinataire réutilisable)
 model Client {
   id        String    @id @default(cuid())
-  userId    String    // Clé étrangère vers l'utilisateur
-  user      User      @relation(fields: [userId], references: [id])
+  userId    String    
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade) 
+  // Note: onDelete: Cascade permet de supprimer les clients si l'user supprime son compte
 
   name      String
   email     String?
+  phone     String?   // NOUVEAU : Indispensable pour le CRM
   address   String?
+  siret     String?   // NOUVEAU : Critique pour la conformité B2B (TVA Intra, etc.)
+  notes     String?   // NOUVEAU : Pour noter des infos (ex: "Contact: Mme Durand")
 
-  Devis     Devis[]   // Le client reçoit plusieurs devis
+  Devis     Devis[]   
+
+  createdAt DateTime  @default(now()) // NOUVEAU : Pour le tri
+  updatedAt DateTime  @updatedAt      // NOUVEAU : Pour le tri
   
-  // Un utilisateur ne peut pas avoir deux clients avec le même nom (pour l'efficacité)
+  // Cette contrainte est très bien pour éviter les doublons stricts
   @@unique([userId, name]) 
   @@map("clients")
 }

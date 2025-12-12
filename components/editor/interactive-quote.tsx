@@ -1,19 +1,46 @@
 "use client";
 
-import React, { useTransition } from "react";
+import React from "react";
 import { Quote, LineItem } from "@/store/quote.store";
-import { Plus, Trash2, Save, Loader2 } from "lucide-react"; // Ajout d'icônes
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TextareaAutosize from "react-textarea-autosize";
-import { saveDevisAction, QuotePayload } from "../../app/(app)/devis/actions"; // Import de l'action
-import { useRouter } from "next/navigation";
+import { ClientSelector } from "@/components/invoice/ClientSelector";
+import { ItemSelector } from "@/components/invoice/ItemSelector";
+
+// --- DÉFINITION DES TYPES STRICTS ---
+
+// Type pour les données renvoyées par le sélecteur de client
+interface ClientSelection {
+  id: string;
+  name: string;
+  email?: string | null;
+  address?: string | null;
+  siret?: string | null;
+  phone?: string | null;
+}
+
+// Type pour les données renvoyées par le sélecteur d'articles
+interface ItemSelection {
+  id: string;
+  title: string;
+  description?: string | null;
+  unitPriceEuros: number;
+  defaultQuantity?: number;
+}
 
 interface InteractiveQuoteProps {
   quote: Quote;
   totals: { subTotal: number; taxAmount: number; totalTTC: number };
-  onUpdateField: (group: string, field: string, value: any) => void;
-  onUpdateLineItem: (index: number, field: string, value: any) => void;
-  onAddLineItem: () => void;
+  // On remplace 'any' par 'string | number' car ce sont les seules valeurs possibles d'un input
+  onUpdateField: (group: string, field: string, value: string | number) => void;
+  onUpdateLineItem: (
+    index: number,
+    field: string,
+    value: string | number
+  ) => void;
+  // On utilise Partial<LineItem> car on peut ajouter un item incomplet
+  onAddLineItem: (item?: Partial<LineItem>) => void;
   onRemoveLineItem: (index: number) => void;
   readOnly?: boolean;
 }
@@ -27,72 +54,40 @@ export const InteractiveQuote = ({
   onRemoveLineItem,
   readOnly = false,
 }: InteractiveQuoteProps) => {
-  const [isPending, startTransition] = useTransition();
-  const router = useRouter();
-
-  // --- LOGIQUE DE SAUVEGARDE (Server Action) ---
-  const handleSave = () => {
-    startTransition(async () => {
-      // 1. Construction du Payload pour le Backend (Nettoyage des données)
-      const payload: QuotePayload = {
-        id: quote.id, // Si vide, c'est une création
-        number: quote.quote.number,
-        // Conversion de la date string en Date object pour Prisma
-        issueDate: new Date(quote.quote.issueDate || Date.now()),
-        terms: quote.quote.terms,
-        totalTTC: totals.totalTTC, // On sauvegarde le total calculé
-
-        financials: {
-          vatRatePercent: quote.financials.vatRatePercent,
-          discountAmountEuros: quote.financials.discountAmountEuros,
-        },
-        client: {
-          name: quote.client.name,
-          email: quote.client.email,
-          address: quote.client.address,
-        },
-        items: quote.items.map((item) => ({
-          title: item.title,
-          quantity: item.quantity,
-          unitPriceEuros: item.unitPriceEuros,
-          subtitle: item.subtitle,
-        })),
-      };
-
-      // 2. Appel du Server Action
-      const result = await saveDevisAction(payload);
-
-      if (result.success) {
-        // Feedback V1 rapide (alert) - À remplacer par un Toast plus tard
-        // Si c'était une création, on pourrait rediriger ou mettre à jour l'URL avec l'ID
-        if (!quote.id && result.devisId) {
-          // Mise à jour de l'URL sans rechargement complet si nécessaire,
-          // ou simplement laisser l'utilisateur continuer.
-          console.log("Devis créé avec ID:", result.devisId);
-        }
-        alert("✅ Devis sauvegardé avec succès !");
-        router.refresh(); // Rafraîchir les données serveur (Dashboard, etc.)
-      } else {
-        alert(`❌ Erreur lors de la sauvegarde : ${result.error}`);
-      }
-    });
-  };
-
   // --- HANDLERS D'INTERFACE ---
+
   const handleClientChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onUpdateField("client", e.target.name, e.target.value);
   };
 
+  // Injection Client (Typage Strict)
+  const handleSelectClient = (clientData: ClientSelection) => {
+    onUpdateField("client", "name", clientData.name);
+    onUpdateField("client", "email", clientData.email || "");
+    onUpdateField("client", "address", clientData.address || "");
+  };
+
+  // Injection Item du Catalogue (Typage Strict)
+  const handleSelectItem = (itemData: ItemSelection) => {
+    // On construit un objet partiel conforme à LineItem
+    const newItem: Partial<LineItem> = {
+      title: itemData.title,
+      subtitle: itemData.description || "",
+      quantity: itemData.defaultQuantity || 1,
+      unitPriceEuros: itemData.unitPriceEuros,
+    };
+    onAddLineItem(newItem);
+  };
+
   const handleFinancialsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseFloat(e.target.value) || 0;
-    onUpdateField("financials", e.target.name, val);
+    // Conversion explicite pour garantir le type number
+    const val = parseFloat(e.target.value);
+    onUpdateField("financials", e.target.name, isNaN(val) ? 0 : val);
   };
 
   return (
     <div className="relative flex flex-col items-center gap-6 pb-20">
-     
-
-      {/* FEUILLE A4 */}
+      {/* FEUILLE A4 - MOTEUR DE RENDU VISUEL */}
       <div className="w-[210mm] min-h-[297mm] bg-white shadow-2xl text-neutral-900 p-12 md:p-16 flex flex-col relative animate-in fade-in zoom-in-95 duration-300 select-none transition-all">
         {/* En-tête */}
         <div className="flex justify-between items-start mb-12">
@@ -105,7 +100,10 @@ export const InteractiveQuote = ({
                   {quote.quote.number}
                 </span>
               </p>
-              <p>Date : {quote.quote.issueDate}</p>
+              <p>
+                Date :{" "}
+                {new Date(quote.quote.issueDate).toLocaleDateString("fr-FR")}
+              </p>
             </div>
           </div>
           <div className="text-right">
@@ -115,58 +113,70 @@ export const InteractiveQuote = ({
             <div className="text-sm text-neutral-500 space-y-0.5 mt-2">
               <p>{quote.company.email}</p>
               <p>{quote.company.phone}</p>
-              <p className="max-w-[200px] ml-auto">{quote.company.address}</p>
+              <p className="max-w-[200px] ml-auto whitespace-pre-line">
+                {quote.company.address}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Client - Editable */}
+        {/* --- ZONE CLIENT (INTELLIGENTE) --- */}
         <div
           className={`mb-16 group relative p-4 -mx-4 rounded-lg transition-colors border border-transparent ${
             !readOnly && "hover:bg-neutral-50 hover:border-neutral-200"
           }`}
         >
           {!readOnly && (
-            <div className="absolute -top-3 left-4 bg-white px-2 text-[10px] font-bold uppercase text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute -top-3 left-4 bg-white px-2 text-[10px] font-bold uppercase text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity z-10">
               Destinataire
             </div>
           )}
+
           {readOnly ? (
             <div className="space-y-1">
               <div className="text-xl font-bold">
                 {quote.client.name || "Nom du client"}
               </div>
               <div className="text-neutral-600">{quote.client.email}</div>
-              <div className="text-neutral-600">{quote.client.address}</div>
+              <div className="text-neutral-600 whitespace-pre-line">
+                {quote.client.address}
+              </div>
             </div>
           ) : (
-            <>
+            <div className="relative">
+              {/* AUTOMATISATION : SÉLECTEUR CLIENT */}
+              <div className="w-full max-w-sm mb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 focus-within:opacity-100">
+                <ClientSelector onSelect={handleSelectClient} />
+              </div>
+
               <input
                 name="name"
                 value={quote.client.name}
                 onChange={handleClientChange}
                 placeholder="Nom du client"
-                className="w-full bg-transparent text-xl font-bold placeholder:text-neutral-300 focus:outline-none"
+                className="w-full bg-transparent text-xl font-bold placeholder:text-neutral-300 focus:outline-none mb-1"
               />
               <input
                 name="email"
                 value={quote.client.email}
                 onChange={handleClientChange}
                 placeholder="Email"
-                className="w-full bg-transparent text-neutral-600 placeholder:text-neutral-300 focus:outline-none"
+                className="w-full bg-transparent text-neutral-600 placeholder:text-neutral-300 focus:outline-none mb-1"
               />
-              <input
+              <TextareaAutosize
                 name="address"
                 value={quote.client.address}
-                onChange={handleClientChange}
-                placeholder="Adresse"
-                className="w-full bg-transparent text-neutral-600 placeholder:text-neutral-300 focus:outline-none"
+                onChange={(e) =>
+                  onUpdateField("client", "address", e.target.value)
+                }
+                placeholder="Adresse complète"
+                className="w-full bg-transparent text-neutral-600 placeholder:text-neutral-300 focus:outline-none resize-none"
               />
-            </>
+            </div>
           )}
         </div>
 
-        {/* Tableau */}
+        {/* --- TABLEAU DES PRESTATIONS --- */}
         <div className="mb-8">
           <div className="grid grid-cols-12 border-b-2 border-black pb-2 text-xs font-bold uppercase tracking-wider">
             <div className="col-span-6">Description</div>
@@ -208,7 +218,7 @@ export const InteractiveQuote = ({
                         onChange={(e) =>
                           onUpdateLineItem(i, "subtitle", e.target.value)
                         }
-                        placeholder="Description détaillée (optionnelle)"
+                        placeholder="Description (facultatif)"
                         className="w-full text-neutral-500 text-xs bg-transparent resize-none focus:outline-none placeholder:text-neutral-300"
                       />
                     </>
@@ -225,7 +235,7 @@ export const InteractiveQuote = ({
                         onUpdateLineItem(
                           i,
                           "quantity",
-                          parseFloat(e.target.value)
+                          parseFloat(e.target.value) || 0
                         )
                       }
                       className="w-full text-center bg-transparent text-neutral-600 focus:outline-none"
@@ -245,7 +255,7 @@ export const InteractiveQuote = ({
                         onUpdateLineItem(
                           i,
                           "unitPriceEuros",
-                          parseFloat(e.target.value)
+                          parseFloat(e.target.value) || 0
                         )
                       }
                       className="w-full text-right bg-transparent text-neutral-600 focus:outline-none"
@@ -256,11 +266,11 @@ export const InteractiveQuote = ({
                   {(item.quantity * item.unitPriceEuros).toFixed(2)} €
                 </div>
 
-                {/* Delete Button */}
+                {/* Bouton Supprimer Ligne */}
                 {!readOnly && (
                   <button
                     onClick={() => onRemoveLineItem(i)}
-                    className="absolute -right-8 top-4 p-1.5 text-neutral-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                    className="absolute -right-8 top-4 p-1.5 text-neutral-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all print:hidden"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -269,19 +279,35 @@ export const InteractiveQuote = ({
             ))}
           </div>
 
+          {/* ACTIONS D'AJOUT (CATALOGUE OU MANUEL) */}
           {!readOnly && (
-            <Button
-              variant="ghost"
-              onClick={onAddLineItem}
-              className="w-full mt-2 border border-dashed border-neutral-200 text-neutral-400 hover:text-neutral-900 hover:border-neutral-400 hover:bg-transparent"
-            >
-              <Plus className="w-4 h-4 mr-2" /> Ajouter une ligne
-            </Button>
+            <div className="mt-4 flex flex-col gap-2 print:hidden">
+              {/* AUTOMATISATION : SÉLECTEUR ITEM */}
+              <div className="w-full max-w-sm">
+                <ItemSelector onSelect={handleSelectItem} />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="h-px bg-neutral-100 flex-1"></div>
+                <span className="text-[10px] text-neutral-400 uppercase">
+                  OU
+                </span>
+                <div className="h-px bg-neutral-100 flex-1"></div>
+              </div>
+
+              <Button
+                variant="ghost"
+                onClick={() => onAddLineItem()} // Ajout vide
+                className="w-full border border-dashed border-neutral-200 text-neutral-400 hover:text-neutral-900 hover:border-neutral-400 hover:bg-transparent"
+              >
+                <Plus className="w-4 h-4 mr-2" /> Ajouter une ligne vide
+              </Button>
+            </div>
           )}
         </div>
 
-        {/* Totaux */}
-        <div className="flex justify-end mt-auto pt-8">
+        {/* --- TOTAUX --- */}
+        <div className="flex justify-end mt-auto pt-8 break-inside-avoid">
           <div className="w-72 space-y-4">
             <div className="flex justify-between text-sm">
               <span className="font-medium text-neutral-600">Total HT</span>
@@ -348,7 +374,7 @@ export const InteractiveQuote = ({
           </div>
         </div>
 
-        {/* Pied de page - Editable */}
+        {/* Pied de page */}
         <div
           className={`mt-20 pt-8 border-t-2 border-neutral-100 text-[10px] text-neutral-400 text-center uppercase tracking-widest group relative`}
         >

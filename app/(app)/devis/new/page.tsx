@@ -1,11 +1,9 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useQuoteStore } from "@/store/quote.store";
-import { pdf, PDFViewer } from "@react-pdf/renderer";
-import { QuoteDocument } from "@/components/pdf/QuoteDocument";
-import { Loader2 } from "lucide-react";
+import { Loader2, Palette } from "lucide-react";
 
 import { EditorLayout } from "@/components/editor/editor-layout";
 import { EditorSidebar } from "@/components/editor/editor-sidebar";
@@ -13,6 +11,17 @@ import { EditorHeader } from "@/components/editor/editor-header";
 import { InteractiveQuote } from "@/components/editor/interactive-quote";
 import { useDebounce } from "@/hooks/use-debounce";
 import { QuotePayload, saveDevisAction } from "../actions";
+
+// IMPORTS PDF
+import PrintableQuote from "@/components/pdf/PrintableQuote";
+import { useReactToPrint } from "react-to-print";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Helper function to calculate totals
 const calculateQuoteTotals = (quote: any) => {
@@ -28,7 +37,7 @@ const calculateQuoteTotals = (quote: any) => {
 };
 
 interface CreateQuoteClientProps {
-  initialQuote: any; // Données venant du serveur
+  initialQuote: any;
   userId: string;
 }
 
@@ -38,7 +47,6 @@ export default function CreateQuoteClient({
 }: CreateQuoteClientProps) {
   const router = useRouter();
 
-  // 1. ZUSTAND : GESTION D'ÉTAT UI (RAPIDE)
   const {
     activeQuote,
     userFolders,
@@ -54,7 +62,24 @@ export default function CreateQuoteClient({
   const [zoom, setZoom] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 2. HYDRATATION : SERVEUR -> ZUSTAND
+  // État pour le thème de la prévisualisation
+  const [previewTheme, setPreviewTheme] = useState<
+    "minimalist" | "executive" | "bold"
+  >("minimalist");
+
+  // --- LOGIQUE D'IMPRESSION CORRIGÉE ---
+  const printableRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = useReactToPrint({
+    // C'EST ICI LA CORRECTION MAJEURE (Nouvelle API v3)
+    contentRef: printableRef,
+    documentTitle: `Devis-${activeQuote?.quote.number || "Brouillon"}`,
+    onBeforeGetContent: () => {
+      handleSaveToDB();
+    },
+  });
+
+  // HYDRATATION
   useEffect(() => {
     if (initialQuote) {
       setActiveQuote(initialQuote);
@@ -62,26 +87,20 @@ export default function CreateQuoteClient({
     setIsLoading(false);
   }, [initialQuote, setActiveQuote]);
 
-  // Calculs en temps réel
+  // Calculs
   const totals = useMemo(
     () => calculateQuoteTotals(activeQuote),
     [activeQuote]
   );
 
-  // Debounce pour l'Auto-Save (2s)
   const debouncedQuote = useDebounce(activeQuote, 2000);
-  const debouncedTotals = useMemo(
-    () => calculateQuoteTotals(debouncedQuote),
-    [debouncedQuote]
-  );
 
-  // 3. FONCTION DE SAUVEGARDE : ZUSTAND -> SERVER ACTION -> DB
+  // SAUVEGARDE DB
   const handleSaveToDB = async () => {
     if (!activeQuote) return;
     setIsSaving(true);
 
     try {
-      // Construction du Payload sécurisé pour le Server Action
       const payload: QuotePayload = {
         id: activeQuote.id === "new" ? undefined : activeQuote.id,
         number: activeQuote.quote.number,
@@ -90,8 +109,8 @@ export default function CreateQuoteClient({
         totalTTC: totals.totalTTC,
         financials: activeQuote.financials,
         client: activeQuote.client,
-        company: activeQuote.company, // Mise à jour de l'émetteur
-        status: activeQuote.meta.status, // Mise à jour du statut
+        company: activeQuote.company,
+        status: activeQuote.meta.status,
         items: activeQuote.items.map((item: any) => ({
           title: item.title,
           quantity: item.quantity,
@@ -103,15 +122,12 @@ export default function CreateQuoteClient({
       const result = await saveDevisAction(payload);
 
       if (result.success && result.devisId) {
-        // Cas spécial : Si on vient de créer un nouveau devis ("new"),
-        // on met à jour l'URL et l'ID local pour éviter de le recréer au prochain save.
         if (activeQuote.id === "new") {
           router.replace(`/devis/${result.devisId}`);
           setActiveQuote({ ...activeQuote, id: result.devisId });
         }
-        console.log("✅ Devis sauvegardé sur Neon.");
+        console.log("✅ Devis sauvegardé.");
       } else {
-        // Gestion d'erreur silencieuse pour l'autosave, ou toast pour le manuel
         console.error("Erreur Save:", result.error);
       }
     } catch (e) {
@@ -121,42 +137,12 @@ export default function CreateQuoteClient({
     }
   };
 
-  // 4. AUTOSAVE INTELLIGENT
+  // AUTOSAVE
   useEffect(() => {
-    // Conditions d'arrêt : chargement en cours, pas de donnée, ou c'est un "nouveau" devis
-    // (on attend souvent le premier save manuel pour créer la ligne en DB, ou on le fait ici)
     if (!debouncedQuote || isLoading) return;
-
-    // Si l'ID est "new", on peut choisir de ne pas autosave pour ne pas spammer la DB de brouillons vides,
-    // ou alors on autosave quand même. Ici, je bloque l'autosave sur "new" pour être propre.
     if (debouncedQuote.id === "new") return;
-
     handleSaveToDB();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedQuote]);
-
-  // 5. EXPORT PDF
-  const handleExportPDF = async () => {
-    if (!activeQuote) return;
-    // On force une sauvegarde avant de générer le PDF pour être sûr des données
-    await handleSaveToDB();
-
-    try {
-      const blob = await pdf(
-        <QuoteDocument quote={activeQuote} totals={totals} />
-      ).toBlob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `devis_${activeQuote.quote.number}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Erreur PDF", error);
-    }
-  };
 
   if (isLoading || !activeQuote) {
     return (
@@ -174,11 +160,11 @@ export default function CreateQuoteClient({
           folders={userFolders}
           viewMode={viewMode}
           setViewMode={setViewMode}
-          onSave={handleSaveToDB} // Sauvegarde Manuelle
+          onSave={handleSaveToDB}
           isSaving={isSaving}
           zoom={zoom}
           setZoom={setZoom}
-          onExport={handleExportPDF} // Export PDF
+          onPrint={handlePrint}
         />
       }
       sidebar={
@@ -191,7 +177,16 @@ export default function CreateQuoteClient({
         />
       }
     >
+      {/* 🛑 COMPOSANT FANTÔME (WRAPPER DIV) */}
+      <div style={{ display: "none" }}>
+        {/* On attache la ref directement sur cette div wrapper */}
+        <div ref={printableRef}>
+          <PrintableQuote quote={activeQuote} theme={previewTheme} />
+        </div>
+      </div>
+
       {viewMode === "edit" ? (
+        // MODE ÉDITION
         <div
           style={{
             transform: `scale(${zoom})`,
@@ -209,18 +204,41 @@ export default function CreateQuoteClient({
           />
         </div>
       ) : (
-        <div className="w-full h-full flex justify-center items-start pt-8 pb-20">
-          <PDFViewer
-            width="100%"
-            height="1200px"
-            className="shadow-2xl rounded-lg border border-neutral-200"
-            showToolbar={false}
-          >
-            <QuoteDocument
-              quote={debouncedQuote || activeQuote}
-              totals={debouncedTotals}
-            />
-          </PDFViewer>
+        // MODE APERÇU
+        <div className="w-full h-full flex flex-col items-center pt-8 pb-20 px-8 overflow-y-auto bg-neutral-100/50">
+          <div className="relative">
+            {/* SÉLECTEUR DE THÈME */}
+            <div className="absolute top-[-40px] right-0 z-20">
+              <div className="flex items-center gap-2 bg-white p-2 rounded-full shadow-md border border-neutral-200">
+                <Palette className="w-4 h-4 text-neutral-500 ml-1" />
+                <Select
+                  value={previewTheme}
+                  onValueChange={(v: any) => setPreviewTheme(v)}
+                >
+                  <SelectTrigger className="w-[160px] h-8 text-xs border-none shadow-none focus:ring-0 bg-neutral-100/80 rounded-full">
+                    <SelectValue placeholder="Choisir un style..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="minimalist">Standard (Clean)</SelectItem>
+                    <SelectItem value="executive">Executive (Blue)</SelectItem>
+                    <SelectItem value="bold">Startup (Bold)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* DOCUMENT VISIBLE (Aperçu Écran) */}
+            <div
+              className="shadow-2xl border border-neutral-200 bg-white"
+              style={{
+                transform: `scale(${zoom})`,
+                transformOrigin: "top center",
+                transition: "transform 0.2s",
+              }}
+            >
+              <PrintableQuote quote={activeQuote} theme={previewTheme} />
+            </div>
+          </div>
         </div>
       )}
     </EditorLayout>

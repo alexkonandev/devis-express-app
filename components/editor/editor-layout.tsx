@@ -6,11 +6,7 @@ interface EditorLayoutProps {
   children: React.ReactNode;
 }
 
-export const EditorLayout = ({
-  sidebar,
-  header,
-  children,
-}: EditorLayoutProps) => {
+export const EditorLayout = ({ sidebar, header, children }: EditorLayoutProps) => {
   return (
     <div className="flex h-full w-full bg-neutral-50 overflow-hidden">
       {/* Main Content Area */}
@@ -29,7 +25,7 @@ export const EditorLayout = ({
       {/* Right Sidebar - Fixed width */}
       {/* MODIF: Passage de w-80 à w-96 pour matcher la Sidebar */}
       {/* MODIF: Retrait de overflow-y-auto car la Sidebar gère son scroll interne */}
-      <aside className="w-96 shrink-0 bg-white border-l border-neutral-200 flex flex-col z-20 shadow-xl h-full">
+      <aside className="w-88 shrink-0 bg-white border-l border-neutral-200 flex flex-col z-20 shadow-xl h-full">
         {sidebar}
       </aside>
     </div>

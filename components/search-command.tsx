@@ -3,16 +3,27 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
-  File,
+  FileText,
   Hash,
   Plus,
   FolderPlus,
   Search,
   ArrowRight,
-  ArrowLeft,
-  Folder,
   CornerDownLeft,
   Loader2,
+  LayoutDashboard,
+  Users,
+  Tag,
+  Settings,
+  CreditCard,
+  LogOut,
+  Laptop,
+  Moon,
+  Sun,
+  Calendar,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
 } from "lucide-react";
 
 import {
@@ -27,43 +38,89 @@ import {
 } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { createFolderAction, searchDevisAction } from "@/app/(app)/devis/actions";
+import { Badge } from "@/components/ui/badge"; // Assure-toi d'avoir ce composant ou retire-le
+import {
+  createFolderAction,
+  searchDevisAction,
+} from "@/app/(app)/devis/actions";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useClerk } from "@clerk/nextjs";
 
-// On remplace le store par l'action serveur et le hook debounce
-
+// --- TYPES ---
+interface SearchResult {
+  id: string;
+  number: string;
+  clientName: string;
+  total: number;
+  status: "DRAFT" | "PENDING" | "PAID" | "OVERDUE"; // Exemple de statuts
+  date: string;
+}
 
 interface SearchCommandProps {
   open: boolean;
   setOpen: (open: boolean) => void;
 }
 
+// --- UTILS : Status Badge Helper ---
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case "PAID":
+      return <CheckCircle2 className="w-3 h-3 text-emerald-500" />;
+    case "PENDING":
+      return <Clock className="w-3 h-3 text-amber-500" />;
+    case "OVERDUE":
+      return <AlertCircle className="w-3 h-3 text-red-500" />;
+    default:
+      return <FileText className="w-3 h-3 text-neutral-400" />;
+  }
+};
+
 export function SearchCommand({ open, setOpen }: SearchCommandProps) {
   const router = useRouter();
+  const { signOut } = useClerk();
 
-  // --- ÉTAT DE RECHERCHE ---
+  // --- ÉTATS ---
   const [query, setQuery] = React.useState("");
   const [results, setResults] = React.useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = React.useState(false);
+  const [pages, setPages] = React.useState<string[]>([]); // Pour gérer la navigation interne (ex: Home > Folder)
 
-  // Debounce pour ne pas surcharger la DB (300ms)
+  // Gestion du Input spécifique pour "Nouveau Dossier"
+  const [newFolderName, setNewFolderName] = React.useState("");
+  const activePage = pages[pages.length - 1];
+
+  // Debounce (300ms)
   const debouncedQuery = useDebounce(query, 300);
 
-  // --- ÉTAT NAVIGATION INTERNE ---
-  const [page, setPage] = React.useState<"root" | "new-folder">("root");
-  const [newFolderName, setNewFolderName] = React.useState("");
-
-  // Reset de l'état quand on ferme/ouvre
+  // --- RESET & SHORTCUTS ---
   React.useEffect(() => {
-    if (open) {
-      setPage("root");
-      setNewFolderName("");
-      setQuery("");
-      setResults([]);
+    if (!open) {
+      setTimeout(() => {
+        setPages([]);
+        setQuery("");
+        setNewFolderName("");
+        setResults([]);
+      }, 300); // Reset après l'animation de fermeture
     }
   }, [open]);
 
-  // --- EFFET DE RECHERCHE ---
+  React.useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setOpen((open) => !open);
+      }
+      // Backspace pour revenir en arrière dans les pages internes
+      if (e.key === "Backspace" && !query && pages.length > 0) {
+        e.preventDefault();
+        setPages((curr) => curr.slice(0, -1));
+      }
+    };
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, [setOpen, query, pages]);
+
+  // --- RECHERCHE SERVEUR ---
   React.useEffect(() => {
     const performSearch = async () => {
       if (debouncedQuery.length < 2) {
@@ -71,6 +128,7 @@ export function SearchCommand({ open, setOpen }: SearchCommandProps) {
         return;
       }
       setIsSearching(true);
+      // @ts-ignore - Mock ou vraie action
       const data = await searchDevisAction(debouncedQuery);
       setResults(data);
       setIsSearching(false);
@@ -79,180 +137,244 @@ export function SearchCommand({ open, setOpen }: SearchCommandProps) {
     performSearch();
   }, [debouncedQuery]);
 
-  // Raccourci Clavier Global
-  React.useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setOpen((open) => !open);
-      }
-    };
-    document.addEventListener("keydown", down);
-    return () => document.removeEventListener("keydown", down);
-  }, [setOpen]);
-
-  const closeCommand = React.useCallback(() => {
-    setOpen(false);
-  }, [setOpen]);
-
-  // --- HANDLERS ---
-
-  const handleOpenQuote = (id: string) => {
-    closeCommand();
-    // Redirection vers la route dynamique
-    router.push(`/devis/${id}`);
-  };
-
-  const handleNewQuote = () => {
-    closeCommand();
-    // Redirection vers la route de création
-    router.push("/devis/new");
-  };
+  // --- ACTIONS ---
+  const runCommand = React.useCallback(
+    (command: () => void) => {
+      setOpen(false);
+      command();
+    },
+    [setOpen]
+  );
 
   const submitNewFolder = async () => {
     if (!newFolderName.trim()) return;
-
     await createFolderAction(newFolderName.trim());
-
-    closeCommand();
-    // Feedback ou refresh
-    router.refresh();
+    runCommand(() => router.refresh());
   };
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
-      {/* VUE 1 : RACINE (RECHERCHE) */}
-      {page === "root" && (
-        <>
-          <CommandInput
-            placeholder="Rechercher un document, une action..."
-            value={query}
-            onValueChange={setQuery}
-          />
-          <CommandList>
-            {/* ETAT DE CHARGEMENT */}
+      {/* HEADER DE LA COMMAND BAR (BREADCRUMB SI NECESSAIRE) */}
+      <div className="flex items-center border-b border-neutral-100 px-3">
+        {activePage === "new-folder" ? (
+          <div className="flex items-center w-full h-12 gap-2">
+            <button
+              onClick={() => setPages([])}
+              className="bg-neutral-100 px-1.5 py-0.5 rounded text-[10px] font-bold text-neutral-500 uppercase tracking-wider hover:bg-neutral-200 transition-colors"
+            >
+              Retour
+            </button>
+            <FolderPlus className="w-4 h-4 text-neutral-400" />
+            <Input
+              autoFocus
+              className="border-none shadow-none focus-visible:ring-0 px-0 h-full text-sm"
+              placeholder="Nom du nouveau dossier..."
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submitNewFolder();
+              }}
+            />
+          </div>
+        ) : (
+          <>
+            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <CommandInput
+              placeholder="Rechercher ou taper une commande..."
+              value={query}
+              onValueChange={setQuery}
+              className="border-none shadow-none focus:ring-0 pl-0"
+            />
+          </>
+        )}
+      </div>
+
+      <CommandList className="max-h-[350px] overflow-y-auto custom-scrollbar">
+        {/* VUE PRINCIPALE */}
+        {!activePage && (
+          <>
+            {/* 1. ÉTAT DE CHARGEMENT */}
             {isSearching && (
-              <div className="flex items-center justify-center py-4 text-neutral-400">
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                <span className="text-xs">Recherche en cours...</span>
+              <div className="py-6 flex items-center justify-center text-sm text-neutral-500 gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Recherche intelligente...
               </div>
             )}
 
-            {/* AUCUN RÉSULTAT */}
-            {!isSearching && results.length === 0 && query.length > 1 && (
-              <CommandEmpty>
-                <div className="flex flex-col items-center justify-center py-6 text-neutral-500">
-                  <Search className="h-8 w-8 mb-2 opacity-20" />
-                  <p className="text-sm">Aucun résultat.</p>
-                </div>
-              </CommandEmpty>
-            )}
-
-            {/* RÉSULTATS DE RECHERCHE DYNAMIQUE */}
-            {results.length > 0 && (
+            {/* 2. RÉSULTATS DE RECHERCHE (Prioritaires si query existe) */}
+            {!isSearching && results.length > 0 && (
               <CommandGroup heading="Documents trouvés">
-                {results.map((quote) => (
+                {results.map((item) => (
                   <CommandItem
-                    key={quote.id}
-                    value={`${quote.number} ${quote.clientName}`}
-                    onSelect={() => handleOpenQuote(quote.id)}
-                    className="cursor-pointer group"
+                    key={item.id}
+                    onSelect={() =>
+                      runCommand(() => router.push(`/devis/${item.id}`))
+                    }
+                    className="group flex items-center justify-between py-3 aria-selected:bg-neutral-100 cursor-pointer"
                   >
-                    <File className="mr-2 h-4 w-4 text-neutral-400" />
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <span className="font-medium text-sm truncate">
-                        {quote.clientName || "Client inconnu"}
-                      </span>
-                      <div className="flex items-center gap-2 text-[10px] text-neutral-400">
-                        <span className="flex items-center gap-0.5 bg-neutral-100 px-1 rounded">
-                          <Hash className="w-2.5 h-2.5" /> {quote.number}
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-md bg-white border border-neutral-200 shadow-sm text-neutral-500 group-aria-selected:border-neutral-300">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div className="flex flex-col truncate">
+                        <span className="font-semibold text-neutral-900 truncate">
+                          {item.clientName}
                         </span>
-                        <span>•</span>
-                        <span>
+                        <div className="flex items-center gap-2 text-xs text-neutral-500">
+                          <span className="font-mono">{item.number}</span>
+                          <span>•</span>
+                          <span>{item.date}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="font-bold text-neutral-900 text-sm">
                           {new Intl.NumberFormat("fr-FR", {
                             style: "currency",
                             currency: "EUR",
-                          }).format(quote.total)}
-                        </span>
+                          }).format(item.total)}
+                        </p>
+                        <div className="flex items-center justify-end gap-1 text-[10px] uppercase font-bold tracking-wider text-neutral-400">
+                          {getStatusIcon(item.status)}
+                          <span>{item.status}</span>
+                        </div>
                       </div>
+                      <ArrowRight className="w-4 h-4 text-neutral-300 opacity-0 group-aria-selected:opacity-100 -translate-x-2 group-aria-selected:translate-x-0 transition-all" />
                     </div>
-                    <ArrowRight className="ml-2 h-3 w-3 text-neutral-300 opacity-0 group-aria-selected:opacity-100 transition-opacity" />
                   </CommandItem>
                 ))}
               </CommandGroup>
             )}
 
-            <CommandSeparator />
+            {/* 3. NAVIGATION & ACTIONS (Si pas de recherche précise) */}
+            {results.length === 0 && (
+              <>
+                <CommandGroup heading="Navigation">
+                  <CommandItem
+                    onSelect={() => runCommand(() => router.push("/devis"))}
+                  >
+                    <LayoutDashboard className="mr-2 h-4 w-4 text-neutral-500" />
+                    <span>Tableau de bord</span>
+                  </CommandItem>
+                  <CommandItem
+                    onSelect={() => runCommand(() => router.push("/clients"))}
+                  >
+                    <Users className="mr-2 h-4 w-4 text-neutral-500" />
+                    <span>Clients</span>
+                  </CommandItem>
+                  <CommandItem
+                    onSelect={() => runCommand(() => router.push("/items"))}
+                  >
+                    <Tag className="mr-2 h-4 w-4 text-neutral-500" />
+                    <span>Catalogue</span>
+                  </CommandItem>
+                </CommandGroup>
 
-            {/* ACTIONS STATIQUES */}
-            <CommandGroup heading="Actions rapides">
-              <CommandItem
-                onSelect={handleNewQuote}
-                className="cursor-pointer group"
-              >
-                <Plus className="mr-2 h-4 w-4 text-neutral-500 group-aria-selected:text-neutral-900" />
-                <span>Créer un nouveau devis</span>
-                <CommandShortcut>⌘N</CommandShortcut>
-              </CommandItem>
+                <CommandSeparator />
 
-              <CommandItem
-                onSelect={() => {
-                  setPage("new-folder");
-                  setNewFolderName("");
-                }}
-                className="cursor-pointer group"
-              >
-                <FolderPlus className="mr-2 h-4 w-4 text-neutral-500 group-aria-selected:text-neutral-900" />
-                <span>Nouveau dossier...</span>
-              </CommandItem>
-            </CommandGroup>
-          </CommandList>
-        </>
-      )}
+                <CommandGroup heading="Création Rapide">
+                  <CommandItem
+                    onSelect={() => runCommand(() => router.push("/devis/new"))}
+                    className="group"
+                  >
+                    <Plus className="mr-2 h-4 w-4 text-blue-500" />
+                    <span className="text-neutral-900 font-medium">
+                      Nouveau Devis
+                    </span>
+                    <CommandShortcut className="bg-blue-50 text-blue-600 border-blue-100">
+                      ⌘N
+                    </CommandShortcut>
+                  </CommandItem>
+                  <CommandItem
+                    onSelect={() =>
+                      runCommand(() => router.push("/clients/new"))
+                    }
+                  >
+                    <Users className="mr-2 h-4 w-4 text-purple-500" />
+                    <span>Nouveau Client</span>
+                  </CommandItem>
+                  <CommandItem
+                    onSelect={() => setPages([...pages, "new-folder"])}
+                  >
+                    <FolderPlus className="mr-2 h-4 w-4 text-orange-500" />
+                    <span>Nouveau Dossier...</span>
+                    <CommandShortcut>F</CommandShortcut>
+                  </CommandItem>
+                </CommandGroup>
 
-      {/* VUE 2 : CRÉATION DOSSIER (INPUT) */}
-      {page === "new-folder" && (
-        <div className="p-4">
-          <div className="flex items-center gap-2 mb-4 text-sm text-neutral-400">
-            <button
-              onClick={() => setPage("root")}
-              className="hover:text-neutral-900 transition-colors flex items-center gap-1"
-            >
-              <ArrowLeft className="w-3 h-3" /> Retour
-            </button>
-            <span className="text-neutral-300">/</span>
-            <span className="text-neutral-900 font-medium flex items-center gap-2">
-              <Folder className="w-3 h-3" /> Nouveau dossier
-            </span>
-          </div>
+                <CommandSeparator />
 
-          <div className="flex gap-2">
-            <Input
-              autoFocus
-              placeholder="Nom du dossier (ex: Projets 2025)"
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") submitNewFolder();
-                if (e.key === "Escape") setPage("root");
-              }}
-              className="h-10"
-            />
-            <Button
-              onClick={submitNewFolder}
-              disabled={!newFolderName.trim()}
-              className="bg-neutral-900 text-white"
-            >
-              Créer <CornerDownLeft className="ml-2 w-3 h-3 opacity-50" />
-            </Button>
-          </div>
+                <CommandGroup heading="Système">
+                  <CommandItem
+                    onSelect={() => runCommand(() => router.push("/settings"))}
+                  >
+                    <Settings className="mr-2 h-4 w-4 text-neutral-500" />
+                    <span>Paramètres</span>
+                    <CommandShortcut>⌘,</CommandShortcut>
+                  </CommandItem>
+                  <CommandItem
+                    onSelect={() => runCommand(() => router.push("/billing"))}
+                  >
+                    <CreditCard className="mr-2 h-4 w-4 text-neutral-500" />
+                    <span>Abonnement</span>
+                  </CommandItem>
+                  <CommandItem
+                    onSelect={() => window.open("mailto:support@devis.com")}
+                  >
+                    <Laptop className="mr-2 h-4 w-4 text-neutral-500" />
+                    <span>Contacter le support</span>
+                  </CommandItem>
+                  <CommandItem
+                    onSelect={() =>
+                      runCommand(() =>
+                        signOut(() => (window.location.href = "/"))
+                      )
+                    }
+                    className="text-red-600 aria-selected:text-red-700 aria-selected:bg-red-50"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Se déconnecter</span>
+                  </CommandItem>
+                </CommandGroup>
+              </>
+            )}
+            <CommandEmpty>Aucun résultat trouvé.</CommandEmpty>
+          </>
+        )}
+      </CommandList>
 
-          <p className="text-[10px] text-neutral-400 mt-3 ml-1">
-            Appuyez sur <span className="font-bold">Entrée</span> pour valider
-            ou <span className="font-bold">Échap</span> pour annuler.
-          </p>
+      {/* FOOTER INTELLIGENT (Style Raycast) */}
+      <div className="flex items-center justify-between border-t border-neutral-100 bg-neutral-50/50 px-3 py-2">
+        <div className="flex gap-4">
+          {activePage === "new-folder" ? (
+            <div className="flex items-center gap-1 text-[10px] text-neutral-400">
+              <CornerDownLeft className="w-3 h-3" />
+              <span className="font-bold text-neutral-600">Entrée</span>
+              <span>pour créer</span>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-1 text-[10px] text-neutral-400">
+                <ArrowRight className="w-3 h-3" />
+                <span className="font-bold text-neutral-600">Sélectionner</span>
+              </div>
+              <div className="flex items-center gap-1 text-[10px] text-neutral-400">
+                <span className="font-bold text-neutral-600">↓ ↑</span>
+                <span>Naviguer</span>
+              </div>
+            </>
+          )}
         </div>
-      )}
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-px bg-neutral-200" />
+          <div className="flex items-center gap-1 text-[10px] text-neutral-400">
+            <span className="font-bold text-neutral-600">Esc</span>
+            <span>Fermer</span>
+          </div>
+        </div>
+      </div>
     </CommandDialog>
   );
 }

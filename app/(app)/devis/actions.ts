@@ -1,7 +1,7 @@
 "use server";
 
 import db from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/app/generated/prisma/client";
 import { getClerkUserId } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
