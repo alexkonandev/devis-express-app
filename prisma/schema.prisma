@@ -39,6 +39,47 @@ model ServiceTemplate {
   @@index([subcategory])
 }
 
+// SERVICE ITEM (Catalogue des Prestations)
+
+// SERVICE ITEM (Catalogue des Prestations)
+model ServiceItem {
+  id              String    @id @default(cuid())
+  userId          String    
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // INFOS DE BASE
+  title           String    
+  description     String?   
+  category        String?   
+  
+  // PRICING SIMPLE (Pour affichage liste rapide)
+  unitPriceEuros  Float     
+  defaultQuantity Float     @default(1) 
+  isTaxable       Boolean   @default(true) 
+
+  // --- HARMONISATION AVEC SERVICE TEMPLATE ---
+  // C'est ici qu'on stocke la richesse de l'offre
+  
+  // Structure: { headline, description, key_benefits[] }
+  salesCopy       Json?     
+  
+  // Structure: { included[], excluded[] }
+  technicalScope  Json?     
+  
+  // Structure: { tiers: { junior, senior, expert }, suggested_model }
+  pricing         Json?     
+  
+  // Structure: { trend, insight } (Optionnel mais bon pour le futur)
+  marketContext   Json?     
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
+  @@unique([userId, title]) 
+  @@map("service_items")
+}
+
 model User {
   id        String    @id @default(cuid()) 
   email     String    @unique 
@@ -65,29 +106,7 @@ model User {
   
   @@map("users")
 }
-// 4. SERVICE ITEM (Catalogue des Prestations)
-model ServiceItem {
-  id              String    @id @default(cuid())
-  userId          String    // Clé étrangère vers l'utilisateur
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  title           String    // Ex: Création Site Vitrine (Nom affiché dans le Devis)
-  description     String?   // Le 'Boilerplate' standard injecté dans l'éditeur
-  unitPriceEuros  Float     // Prix unitaire HT (Ex: 1500.00)
-  defaultQuantity Float     @default(1) // Quantité par défaut (utile pour TJM, Packs, etc.)
-  isTaxable       Boolean   @default(true) // Si la TVA s'applique par défaut
 
-  // Champs de Monétisation / Organisation
-  category        String?   // Ex: Development, Consulting (Pour filtres Premium)
-
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  @@index([userId])
-  // Garantit que le catalogue reste propre
-  @@unique([userId, title]) 
-  @@map("service_items")
-}
 // 2. CLIENT (Destinataire réutilisable)
 model Client {
   id        String    @id @default(cuid())

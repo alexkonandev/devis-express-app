@@ -107,35 +107,61 @@ export const EditableTextCell = ({
   );
 };
 
-/**
- * 2. CELLULE PRIX ÉDITABLE (Alignement Droite + Format Monétaire)
- */
 interface EditablePriceCellProps {
-  value: number;
-  onSave: (val: number) => void;
+  value: number | undefined | null; // On autorise explicitement les valeurs nulles
+  id: string; // Utile pour les logs ou keys
+  onUpdate: (newValue: number) => void;
 }
 
 export const EditablePriceCell = ({
   value,
-  onSave,
+  id,
+  onUpdate,
 }: EditablePriceCellProps) => {
+  // 1. SÉCURITÉ : Valeur par défaut (Business Rule : Pas de prix = 0€)
+  const safeValue = value ?? 0;
+
   const [isEditing, setIsEditing] = useState(false);
-  const [localValue, setLocalValue] = useState(value.toString());
+  // Correction ici : on utilise safeValue
+  const [localValue, setLocalValue] = useState(safeValue.toString());
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => setLocalValue(value.toString()), [value]);
+  // 2. SYNCHRONISATION : Si la donnée change depuis le serveur, on met à jour le local
+  useEffect(() => {
+    // Correction ici aussi : protection contre undefined
+    setLocalValue((value ?? 0).toString());
+  }, [value]);
 
   useEffect(() => {
-    if (isEditing && inputRef.current) inputRef.current.focus();
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select(); // UX: Sélectionne tout le texte pour remplacement rapide
+    }
   }, [isEditing]);
 
-  const commit = () => {
+  const handleBlur = () => {
     setIsEditing(false);
-    const num = parseFloat(localValue);
-    if (!isNaN(num) && num !== value) {
-      onSave(num);
+    const parsed = parseFloat(localValue.replace(",", ".")); // Support virgule/point
+
+    if (isNaN(parsed)) {
+      setLocalValue(safeValue.toString()); // Revert si invalide
+      return;
+    }
+
+    // On ne déclenche l'update que si la valeur a vraiment changé
+    if (parsed !== safeValue) {
+      onUpdate(parsed);
     } else {
-      setLocalValue(value.toString());
+      // Reformatage propre même si pas de changement (ex: "10." -> "10")
+      setLocalValue(parsed.toString());
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleBlur();
+    if (e.key === "Escape") {
+      setLocalValue(safeValue.toString());
+      setIsEditing(false);
     }
   };
 
@@ -143,19 +169,11 @@ export const EditablePriceCell = ({
     return (
       <Input
         ref={inputRef}
-        type="number"
-        step="0.01"
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") commit();
-          if (e.key === "Escape") {
-            setLocalValue(value.toString());
-            setIsEditing(false);
-          }
-        }}
-        className="w-full h-full border-none shadow-none focus-visible:ring-0 px-3 text-right font-mono text-sm bg-indigo-50/50 rounded-none absolute inset-0 z-10"
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        className="h-8 w-24 text-right font-mono text-sm bg-white shadow-sm border-indigo-500 ring-1 ring-indigo-500/20"
       />
     );
   }
@@ -163,16 +181,24 @@ export const EditablePriceCell = ({
   return (
     <div
       onClick={() => setIsEditing(true)}
-      className="w-full h-full flex items-center justify-end px-3 cursor-text hover:bg-zinc-50 font-mono text-sm font-medium text-zinc-700 absolute inset-0 transition-colors"
+      className="cursor-pointer group relative flex items-center justify-end px-2 py-1.5 rounded hover:bg-zinc-100 transition-colors"
     >
-      {new Intl.NumberFormat("fr-FR", {
-        style: "currency",
-        currency: "EUR",
-      }).format(value)}
+      <span
+        className={cn(
+          "font-mono text-sm font-medium",
+          safeValue === 0 ? "text-zinc-300" : "text-zinc-700"
+        )}
+      >
+        {new Intl.NumberFormat("fr-FR", {
+          style: "currency",
+          currency: "EUR",
+        }).format(safeValue)}
+      </span>
+      {/* Petit indicateur visuel au survol pour inciter à l'édition */}
+      <div className="absolute inset-0 border border-transparent group-hover:border-zinc-300 rounded pointer-events-none" />
     </div>
   );
 };
-
 /**
  * 3. CELLULE SÉLECTEUR DE CATÉGORIE (Compact)
  */

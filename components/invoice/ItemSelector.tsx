@@ -1,131 +1,150 @@
+// Fichier: components/invoice/ItemSelector.tsx
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { Search, Package, Plus, Loader2 } from "lucide-react";
-import { getItemsAction } from "@/app/actions/item.actions"; // Assurez-vous que cette action existe
-import { toast } from "sonner";
+import React, { useState, useEffect } from "react";
+import { Check, ChevronsUpDown, Search, Package } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { useDebounce } from "@/hooks/use-debounce";
+import { searchCatalogItemsAction } from "@/app/actions/item.actions";
 
-interface ItemData {
+// Type aligné avec InteractiveQuote
+interface ItemSelection {
   id: string;
   title: string;
   description?: string | null;
   unitPriceEuros: number;
   defaultQuantity?: number;
-  isTaxable?: boolean;
+  technicalScope?: any;
+  pricing?: any;
+  salesCopy?: any;
 }
 
 interface ItemSelectorProps {
-  onSelect: (item: ItemData) => void;
+  onSelect: (item: ItemSelection) => void;
 }
 
 export function ItemSelector({ onSelect }: ItemSelectorProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [items, setItems] = useState<ItemData[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const handleOpen = async () => {
-    setIsOpen(true);
-    if (items.length === 0 && !isLoading) {
-      setIsLoading(true);
-      // On récupère tout le catalogue (souvent petit pour les freelances)
-      const res = await getItemsAction();
-      if (res.success && res.data) {
-        setItems(res.data as any[]);
-      } else {
-        toast.error("Impossible de charger le catalogue");
-      }
-      setIsLoading(false);
-    }
-  };
+  // Debounce pour ne pas spammer la DB à chaque frappe
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        wrapperRef.current &&
-        !wrapperRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    // Si le menu est fermé, on ne cherche pas
+    if (!open) return;
 
-  const filteredItems = items.filter((i) =>
-    i.title.toLowerCase().includes(query.toLowerCase())
-  );
+    const fetchItems = async () => {
+      setLoading(true);
+      const data = await searchCatalogItemsAction(debouncedSearch);
+      setResults(data)
+      setLoading(false);
+    };
+
+    fetchItems();
+  }, [debouncedSearch, open]);
+
+  const handleSelect = (item: any) => {
+    // CORRECTION MAJEURE : On passe l'objet complet proprement
+    onSelect({
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      unitPriceEuros: item.unitPriceEuros ?? 0, // Sécurité anti-null
+      defaultQuantity: item.defaultQuantity ?? 1,
+      technicalScope: item.technicalScope,
+      pricing: item.pricing,
+      salesCopy: item.salesCopy,
+    });
+    setOpen(false);
+    setSearchTerm(""); // Reset
+  };
 
   return (
-    <div className="relative w-full print:hidden" ref={wrapperRef}>
-      <div className="relative group">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 group-hover:text-emerald-500 transition-colors" />
-        <input
-          type="text"
-          placeholder="Ajouter depuis le catalogue..."
-          className="w-full h-8 pl-9 pr-4 rounded-md border border-neutral-200 bg-neutral-50/50 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:bg-white transition-all placeholder:text-neutral-400"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={handleOpen}
-        />
-      </div>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between text-zinc-500 hover:text-zinc-900 border-dashed hover:border-solid hover:bg-zinc-50"
+        >
+          <span className="flex items-center gap-2 truncate">
+            <Package className="w-4 h-4" />
+            Importer depuis le catalogue...
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
 
-      {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg border border-neutral-200 shadow-xl z-50 max-h-60 overflow-y-auto">
-          {isLoading ? (
-            <div className="p-4 flex justify-center text-neutral-400">
-              <Loader2 className="w-4 h-4 animate-spin" />
-            </div>
-          ) : filteredItems.length > 0 ? (
-            <div className="p-1">
-              <div className="px-2 py-1.5 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
-                Catalogue ({filteredItems.length})
+      <PopoverContent className="w-[300px] p-0" align="start">
+        <Command shouldFilter={false}>
+          {/* shouldFilter=false car on filtre côté serveur */}
+
+          <CommandInput
+            placeholder="Rechercher un service..."
+            value={searchTerm}
+            onValueChange={setSearchTerm}
+          />
+
+          <CommandList>
+            {loading && (
+              <div className="py-6 text-center text-xs text-zinc-400">
+                Chargement...
               </div>
-              {filteredItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    onSelect(item);
-                    setIsOpen(false);
-                    setQuery("");
-                    toast.success("Service ajouté !");
-                  }}
-                  className="w-full text-left px-3 py-2 hover:bg-emerald-50 rounded-md flex items-center justify-between group transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-md bg-neutral-100 flex items-center justify-center text-neutral-500">
-                      <Package className="w-3 h-3" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-neutral-900 text-xs">
+            )}
+
+            {!loading && results.length === 0 && (
+              <CommandEmpty className="py-4 text-center text-xs text-zinc-400">
+                Aucun service trouvé.
+              </CommandEmpty>
+            )}
+
+            {!loading && results.length > 0 && (
+              <CommandGroup heading="Catalogue">
+                {results.map((item) => (
+                  <CommandItem
+                    key={item.id}
+                    value={item.id} // Important pour la key interne
+                    onSelect={() => handleSelect(item)}
+                    className="flex flex-col items-start gap-1 py-3 cursor-pointer"
+                  >
+                    <div className="flex w-full justify-between items-center">
+                      <span className="font-bold text-zinc-900 text-sm">
                         {item.title}
-                      </p>
-                      <p className="text-[10px] text-neutral-400">
-                        {item.unitPriceEuros} €
-                      </p>
+                      </span>
+                      <span className="font-mono text-xs font-medium text-emerald-600">
+                        {item.unitPriceEuros.toFixed(2)} €
+                      </span>
                     </div>
-                  </div>
-                  <Plus className="w-3.5 h-3.5 text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="p-3 text-center">
-              <p className="text-xs text-neutral-500 mb-2">Catalogue vide.</p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full text-xs h-7"
-                onClick={() => window.open("/items", "_blank")}
-              >
-                <Plus className="w-3 h-3 mr-2" /> Créer un service
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+                    {item.description && (
+                      <span className="text-xs text-zinc-500 line-clamp-1 w-full">
+                        {item.description}
+                      </span>
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
-  Sparkles,
   LayoutGrid,
   Layers,
   X,
@@ -26,7 +25,6 @@ import { ServiceDetailsDialog } from "./ServiceDetailsDialog";
 // UI Atoms
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
 // --- 1. HOOK DE CALCUL (LOGIQUE ROBUSTE) ---
@@ -249,23 +247,32 @@ export const ServiceExplorerPage = ({
   const handleImportAction = async () => {
     if (importSet.length === 0) return;
     setIsImporting(true);
-    // ... Logique d'import inchangée ...
+
     try {
-      const results = await Promise.allSettled(
+      await Promise.allSettled(
         importSet.map((item) =>
           upsertItemAction({
             title: item.title,
             description: item.description,
+
+            // TRANSFERT DE VALEUR : On prend le prix configuré du Dialog
             unitPriceEuros: item.defaultPrice,
+
             defaultQuantity: 1,
             isTaxable: true,
             category: item.category,
+
+            // On n'oublie pas le moteur Ferrari
+            pricing: item.pricing,
+            technicalScope: item.technicalScope,
+            salesCopy: item.salesCopy,
+            marketContext: item.marketContext,
           })
         )
       );
-      toast.success("Import terminé");
+      toast.success("Import terminé avec succès");
       setImportSet([]);
-      router.push("/catalog");
+      router.push("/items"); // Ou /catalog selon ta route
     } catch (e) {
       toast.error("Erreur d'import");
     } finally {

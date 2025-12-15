@@ -9,6 +9,10 @@ import { revalidatePath } from "next/cache";
 // 1. DÉFINITIONS DE TYPES (Alignés sur Frontend & DB)
 // ============================================================================
 
+// ============================================================================
+// 1. DÉFINITIONS DE TYPES (Alignés sur Frontend & DB)
+// ============================================================================
+
 export type QuoteStatus =
   | "draft"
   | "sent"
@@ -16,15 +20,16 @@ export type QuoteStatus =
   | "rejected"
   | "archived";
 
+// MISE À JOUR : Ajout des champs riches optionnels dans les items
 export type QuotePayload = {
   id?: string;
   clientId?: string;
   number: string;
   issueDate: Date;
-  validityDate?: Date; // NOUVEAU : Date d'échéance
+  validityDate?: Date;
   terms: string;
   totalTTC: number;
-  status: QuoteStatus; // NOUVEAU : Typage strict
+  status: QuoteStatus;
   financials: {
     vatRatePercent: number;
     discountAmountEuros: number;
@@ -45,6 +50,11 @@ export type QuotePayload = {
     quantity: number;
     unitPriceEuros: number;
     subtitle?: string;
+    // --- NOUVEAUX CHAMPS RICHES ---
+    // Ils sont optionnels (?) car une ligne ajoutée manuellement n'en aura pas forcément
+    technicalScope?: any; // ou { included: string[], excluded: string[] }
+    pricing?: any;
+    salesCopy?: any;
   }>;
 };
 
@@ -82,7 +92,6 @@ export async function saveDevisAction(payload: QuotePayload) {
     }
 
     // B. Gestion du Client (Upsert)
-    // On cherche par le couple [UserId + Nom] car un User peut avoir plusieurs clients
     const clientRecord = await db.client.upsert({
       where: {
         userId_name: { userId: userId, name: payload.client.name },
@@ -99,7 +108,7 @@ export async function saveDevisAction(payload: QuotePayload) {
       },
     });
 
-    // C. Calcul de la date de validité par défaut (30 jours) si absente
+    // C. Date de validité
     let validUntil = payload.validityDate;
     if (!validUntil) {
       validUntil = new Date(payload.issueDate);
@@ -112,16 +121,20 @@ export async function saveDevisAction(payload: QuotePayload) {
       clientId: clientRecord.id,
       number: payload.number,
       issueDate: payload.issueDate,
-      validityDate: validUntil, // Sauvegarde en DB
-      status: payload.status, // Sauvegarde directe du string (draft, sent...)
+      validityDate: validUntil,
+      status: payload.status,
       totalTTC: payload.totalTTC,
       vatRatePercent: payload.financials.vatRatePercent,
       discountAmountEuros: payload.financials.discountAmountEuros,
-      itemsData: payload.items as Prisma.JsonValue,
+      
+      // La magie opère ici : Prisma va sérialiser tout l'objet items,
+      // y compris les nouveaux champs technicalScope, pricing, etc.
+      itemsData: payload.items as Prisma.JsonValue, 
+      
       terms: payload.terms,
     };
 
-    // E. Exécution (Create ou Update)
+    // E. Exécution
     const result = payload.id
       ? await db.devis.update({
           where: { id: payload.id, userId: userId },
@@ -138,7 +151,6 @@ export async function saveDevisAction(payload: QuotePayload) {
       message: "Devis sauvegardé avec succès.",
     };
   } catch (error) {
-    // Gestion spécifique erreur d'unicité (Numéro de devis)
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2002") {
         const target = (error.meta?.target as string[]) || [];

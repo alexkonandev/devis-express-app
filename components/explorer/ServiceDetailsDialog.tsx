@@ -1,31 +1,23 @@
 "use client";
 
-import React, { useMemo } from "react";
-import {
-  Check,
-  Plus,
-  Tag,
-  Layers,
-  Info,
-  CreditCard,
-  FileText,
-  Calculator,
-} from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
 import { UIItem } from "@/types/explorer";
-import { cn } from "@/lib/utils";
-
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { TrendingUp, Check } from "lucide-react";
+
+// Imports des composants modulaires
+import { EditableText } from "./EditableText";
+import { TierSelector, TierType } from "./TierSelector";
+import { ScopeShaper } from "./ScopeShaper";
+import { BillingManager, BillingMode } from "./BillingManager";
+import { LiveReceipt } from "./LiveReceipt";
 
 interface ServiceDetailsDialogProps {
   item: UIItem | null;
@@ -42,166 +34,264 @@ export const ServiceDetailsDialog = ({
   onAddToSet,
   isInSet,
 }: ServiceDetailsDialogProps) => {
-  if (!item) return null;
+  // ===========================================================================
+  // 1. HOOKS (TOUJOURS EN PREMIER)
+  // ===========================================================================
 
-  // --- LOGIQUE FINANCIÈRE AVANCÉE ---
-  const financials = useMemo(() => {
-    const ht = item.defaultPrice;
-    const tvaRate = 0.2; // 20% hardcodé pour l'exemple (devrait venir d'une config)
-    const tvaAmount = ht * tvaRate;
-    const ttc = ht + tvaAmount;
+  // State: Méta-données éditables
+  const [title, setTitle] = useState("");
 
+  // State: Configuration Business
+  const [tier, setTier] = useState<TierType>("senior");
+  const [price, setPrice] = useState(0);
+  const [billingMode, setBillingMode] = useState<BillingMode>("fixed");
+  const [quantity, setQuantity] = useState(1);
+
+  // State: Périmètre (Scope)
+  const [scope, setScope] = useState<{
+    included: string[];
+    excluded: string[];
+  }>({
+    included: [],
+    excluded: [],
+  });
+
+  // Effect: Initialisation / Reset des données
+  // C'est ici qu'on charge les données de l'item dans le state local
+  useEffect(() => {
+    if (isOpen && item) {
+      setTitle(item.title);
+
+      // Sécurisation des données du scope (évite le bug d'affichage vide)
+      setScope({
+        included: item.technicalScope?.included
+          ? [...item.technicalScope.included]
+          : [],
+        excluded: item.technicalScope?.excluded
+          ? [...item.technicalScope.excluded]
+          : [],
+      });
+
+      // Reset du Tier et Prix
+      setTier("senior");
+      if (item.pricing?.tiers) {
+        setPrice(item.pricing.tiers.senior.avg);
+      } else {
+        setPrice(item.defaultPrice || 0);
+      }
+
+      setQuantity(1);
+      setBillingMode("fixed");
+    }
+  }, [isOpen, item]);
+
+  // Derived Data: Bornes de prix (Memoized pour la perf)
+  const tierBounds = useMemo(() => {
+    if (!item?.pricing?.tiers) return { min: 0, max: 10000 };
     return {
-      ht: new Intl.NumberFormat("fr-FR", {
-        style: "currency",
-        currency: "EUR",
-      }).format(ht),
-      tva: new Intl.NumberFormat("fr-FR", {
-        style: "currency",
-        currency: "EUR",
-      }).format(tvaAmount),
-      ttc: new Intl.NumberFormat("fr-FR", {
-        style: "currency",
-        currency: "EUR",
-      }).format(ttc),
+      min: item.pricing.tiers[tier].min,
+      max: item.pricing.tiers[tier].max,
     };
-  }, [item.defaultPrice]);
+  }, [item?.pricing, tier]);
 
-  const handleAction = () => {
-    onAddToSet(item);
+  const isMarketRising = item?.marketContext?.trend === "rising";
+
+  // ===========================================================================
+  // 2. HANDLERS (LOGIQUE MÉTIER)
+  // ===========================================================================
+
+  const handleTierChange = (newTier: TierType) => {
+    if (!item) return;
+    setTier(newTier);
+    if (item.pricing?.tiers) {
+      setPrice(item.pricing.tiers[newTier].avg);
+    }
+  };
+
+  const handleScopeToggle = (text: string, from: "included" | "excluded") => {
+    if (from === "included") {
+      // Downsell: On enlève de l'inclus vers l'exclus
+      setScope((prev) => ({
+        included: prev.included.filter((t) => t !== text),
+        excluded: [text, ...prev.excluded],
+      }));
+    } else {
+      // Upsell: On ajoute de l'exclus vers l'inclus
+      setScope((prev) => ({
+        excluded: prev.excluded.filter((t) => t !== text),
+        included: [text, ...prev.included],
+      }));
+    }
+  };
+
+  const handleApplyMarketIncrease = () => {
+    setPrice((prev) => Math.floor(prev * 1.15));
+  };
+
+  const handleConfirm = () => {
+    if (!item) return;
+
+    // SNAPSHOT DU PRIX
+    // On prend le prix calculé par le slider/tier (price) et on l'injecte comme prix par défaut
+    const configuredPrice = price;
+
+    const finalItem: UIItem = {
+      ...item,
+      // On ajoute le Tier au titre pour que ce soit clair dans le devis
+      title: `${title} [${tier.toUpperCase()}]`,
+
+      // CRUCIAL : C'est ce prix qui sera sauvegardé dans unitPriceEuros
+      defaultPrice: configuredPrice * quantity,
+
+      technicalScope: scope,
+      // On peut aussi sauvegarder la quantité si le modèle de données le permettait
+    };
+
+    onAddToSet(finalItem);
     onClose();
   };
 
+  // ===========================================================================
+  // 3. RENDU CONDITIONNEL (SÉCURITÉ)
+  // ===========================================================================
+
+  // Si pas d'item, on rend null MAIS les hooks ont déjà été déclarés au dessus -> Pas d'erreur React.
+  if (!item) return null;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-3xl p-0 gap-0 overflow-hidden bg-white border-none shadow-2xl">
-        {/* HEADER */}
-        <DialogHeader className="p-6 pb-4 border-b border-zinc-100 bg-zinc-50/50">
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
+      <DialogContent className="sm:max-w-7xl p-0 gap-0 bg-zinc-50 overflow-hidden h-[90vh] flex flex-col border-none shadow-2xl">
+        {/* --- HEADER --- */}
+        <DialogHeader className="px-8 py-6 bg-white border-b border-zinc-200 shrink-0">
+          <div className="flex justify-between items-start">
+            <div className="space-y-2 w-full max-w-3xl">
+              <div className="flex items-center gap-3">
                 <Badge
-                  variant="outline"
-                  className="bg-white text-zinc-600 border-zinc-200 shadow-sm"
+                  variant="secondary"
+                  className="bg-zinc-100 text-zinc-600 border-zinc-200"
                 >
-                  <Tag className="w-3 h-3 mr-1" /> {item.category}
+                  {item.category}
                 </Badge>
-                {item.iconName && (
-                  <Badge
-                    variant="secondary"
-                    className="bg-indigo-50 text-indigo-700 border-indigo-100"
-                  >
-                    <Layers className="w-3 h-3 mr-1" /> {item.iconName}
-                  </Badge>
+
+                {/* Market Insight (Prop #6) */}
+                {isMarketRising && (
+                  <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-500">
+                    <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200 gap-1 shadow-sm">
+                      <TrendingUp className="w-3 h-3" /> Forte Demande
+                    </Badge>
+                    <button
+                      onClick={handleApplyMarketIncrease}
+                      className="text-[10px] font-bold text-indigo-600 underline hover:text-indigo-800 transition-colors"
+                    >
+                      Appliquer +15%
+                    </button>
+                  </div>
                 )}
               </div>
-              <DialogTitle className="text-2xl font-bold text-zinc-900 leading-tight">
-                {item.title}
-              </DialogTitle>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-mono font-bold text-indigo-600 tracking-tight">
-                {financials.ht}
+
+              {/* Copywriting Editor (Prop #4) */}
+              <div className="pr-4">
+                <DialogTitle>
+                  <EditableText
+                    as="h1"
+                    value={title}
+                    onSave={setTitle}
+                    className="text-3xl font-bold text-zinc-900 tracking-tight"
+                  />
+                </DialogTitle>
               </div>
-              <div className="text-[10px] text-zinc-400 uppercase font-bold mt-1 tracking-wider">
-                Prix Unitaire HT
+            </div>
+
+            <div className="hidden lg:block text-right">
+              <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                Offre N°
+              </div>
+              <div className="font-mono text-zinc-600">
+                {item.id.slice(0, 8)}
               </div>
             </div>
           </div>
-          <DialogDescription className="sr-only">
-            Détails techniques pour {item.title}
-          </DialogDescription>
         </DialogHeader>
 
-        {/* CONTENU */}
-        <ScrollArea className="max-h-[60vh] flex flex-col bg-white">
-          <div className="p-6 space-y-8">
-            {/* Description */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
-                <FileText className="w-4 h-4" /> Périmètre du service
-              </h4>
-              <div className="text-sm text-zinc-700 leading-7 whitespace-pre-wrap bg-zinc-50 p-5 rounded-xl border border-zinc-100">
-                {item.description ||
-                  "Spécifications standard appliquées. Aucune particularité technique notée."}
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* SIMULATEUR FINANCIER */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
-                  <Info className="w-4 h-4" /> Configuration
-                </h4>
-                <ul className="space-y-2">
-                  <li className="flex items-center justify-between text-sm p-2 bg-zinc-50 rounded border border-zinc-100">
-                    <span className="text-zinc-600">Quantité par défaut</span>
-                    <span className="font-mono font-bold">1.0</span>
-                  </li>
-                  <li className="flex items-center justify-between text-sm p-2 bg-zinc-50 rounded border border-zinc-100">
-                    <span className="text-zinc-600">Type de facturation</span>
-                    <span className="font-medium">Au forfait</span>
-                  </li>
-                </ul>
+        <div className="flex-1 flex overflow-hidden">
+          {/* --- GAUCHE: SCOPE SHAPER (Main Content) --- */}
+          <div className="flex-1 overflow-y-auto p-8 bg-white scrollbar-thin scrollbar-thumb-zinc-200">
+            <div className="max-w-4xl mx-auto space-y-8 pb-10">
+              {/* Description Contextuelle */}
+              <div className="p-4 bg-zinc-50 border border-zinc-100 rounded-lg text-sm text-zinc-600 leading-relaxed">
+                {item.salesCopy?.description || item.description}
               </div>
 
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-widest text-indigo-400 flex items-center gap-2">
-                  <Calculator className="w-4 h-4" /> Projection Coût
-                </h4>
-                <div className="bg-indigo-50/50 rounded-xl p-4 border border-indigo-100 space-y-2">
-                  <div className="flex justify-between text-xs text-zinc-500">
-                    <span>Base HT</span>
-                    <span className="font-mono">{financials.ht}</span>
-                  </div>
-                  <div className="flex justify-between text-xs text-zinc-500">
-                    <span>TVA (20%)</span>
-                    <span className="font-mono">{financials.tva}</span>
-                  </div>
-                  <Separator className="bg-indigo-200/50" />
-                  <div className="flex justify-between text-sm font-bold text-indigo-900 pt-1">
-                    <span>Total TTC estimé</span>
-                    <span className="font-mono">{financials.ttc}</span>
-                  </div>
-                </div>
-              </div>
+              {/* Scope Shaper (Prop #2) */}
+              <section>
+                <h3 className="text-sm font-bold text-zinc-900 mb-4 flex items-center gap-2">
+                  <span className="w-1 h-4 bg-indigo-500 rounded-full"></span>
+                  Périmètre Technique
+                </h3>
+                <ScopeShaper
+                  included={scope.included}
+                  excluded={scope.excluded}
+                  onToggle={handleScopeToggle}
+                />
+              </section>
             </div>
           </div>
-        </ScrollArea>
 
-        {/* FOOTER */}
-        <DialogFooter className="p-4 border-t border-zinc-200 bg-zinc-50 flex sm:justify-between items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={onClose}
-            className="text-zinc-500 hover:text-zinc-900 font-medium"
-          >
-            Fermer sans ajouter
-          </Button>
+          {/* --- DROITE: CONFIGURATION SIDEBAR --- */}
+          <div className="w-full lg:w-[420px] bg-zinc-50/80 border-l border-zinc-200 flex flex-col shadow-[inset_10px_0_30px_-15px_rgba(0,0,0,0.03)] backdrop-blur-sm z-10">
+            <div className="p-6 space-y-8 flex-1 overflow-y-auto scrollbar-thin">
+              {/* Tier Selector (Prop #1) */}
+              <section>
+                <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-4">
+                  Niveau d'expertise
+                </h4>
+                <TierSelector currentTier={tier} onSelect={handleTierChange} />
+              </section>
 
-          <Button
-            onClick={handleAction}
-            disabled={isInSet}
-            className={cn(
-              "min-w-[200px] shadow-lg transition-all font-bold h-11",
-              isInSet
-                ? "bg-emerald-600 text-white"
-                : "bg-zinc-900 hover:bg-indigo-600 text-white"
-            )}
-          >
-            {isInSet ? (
-              <>
-                <Check className="w-4 h-4 mr-2" /> Service Déjà Sélectionné
-              </>
-            ) : (
-              <>
-                <Plus className="w-4 h-4 mr-2" /> Ajouter au Devis
-              </>
-            )}
-          </Button>
-        </DialogFooter>
+              {/* Billing & Slider (Prop #7 & #3) */}
+              <section>
+                <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-400 mb-4">
+                  Modèle Économique
+                </h4>
+                <BillingManager
+                  mode={billingMode}
+                  setMode={setBillingMode}
+                  quantity={quantity}
+                  setQuantity={setQuantity}
+                  price={price}
+                  setPrice={setPrice}
+                  minPrice={tierBounds.min}
+                  maxPrice={tierBounds.max}
+                />
+              </section>
+
+              {/* Live Receipt (Prop #5) */}
+              <LiveReceipt
+                basePrice={price}
+                quantity={quantity}
+                mode={billingMode}
+                optionsCount={scope.included.length}
+              />
+            </div>
+
+            {/* Footer Action */}
+            <div className="p-6 bg-white border-t border-zinc-200">
+              <Button
+                onClick={handleConfirm}
+                disabled={isInSet}
+                className="w-full h-12 text-sm font-bold uppercase tracking-widest bg-zinc-900 hover:bg-indigo-600 shadow-lg hover:shadow-indigo-200 transition-all duration-300"
+              >
+                {isInSet ? (
+                  <>
+                    <Check className="mr-2 h-4 w-4" /> Offre Configurée
+                  </>
+                ) : (
+                  "Valider la configuration"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -26,6 +26,9 @@ export interface QuoteMeta {
   createdAt: string;
   updatedAt: string;
   tags: string[];
+  // Ajout pour compatibilité avec l'EditorSidebar
+  validityDays?: number;
+  paymentTerms?: string;
 }
 
 export interface LineItem {
@@ -34,6 +37,11 @@ export interface LineItem {
   subtitle: string;
   quantity: number;
   unitPriceEuros: number;
+
+  // NOUVEAU : Données riches provenant du catalogue
+  technicalScope?: any;
+  pricing?: any;
+  salesCopy?: any;
 }
 
 export interface QuoteCompany {
@@ -84,6 +92,8 @@ export const DEFAULT_QUOTE_DATA: Quote = {
     createdAt: getISODate(),
     updatedAt: getISODate(),
     tags: [],
+    validityDays: 30,
+    paymentTerms: "Acompte de 30% à la commande, solde à la livraison.",
   },
   company: { name: "", address: "", phone: "", email: "" },
   client: { name: "", address: "", phone: "", email: "" },
@@ -92,7 +102,7 @@ export const DEFAULT_QUOTE_DATA: Quote = {
     issueDate: new Date().toISOString().split("T")[0],
     expiryDate: "",
     paymentTerms: "",
-    terms: "",
+    terms: "Règlement à réception de facture.",
   },
   items: [{ id: "1", title: "", subtitle: "", quantity: 1, unitPriceEuros: 0 }],
   financials: { vatRatePercent: 20, discountAmountEuros: 0 },
@@ -107,7 +117,7 @@ interface QuoteStore {
   userFolders: Folder[];
 
   // --- ACTIONS UI ---
-  setActiveQuote: (quote: Quote) => void; // Pour l'hydratation serveur
+  setActiveQuote: (quote: Quote) => void;
   updateActiveQuoteField: (
     group: keyof Quote | "meta",
     field: string,
@@ -118,7 +128,10 @@ interface QuoteStore {
     field: keyof LineItem,
     value: any
   ) => void;
-  addActiveLineItem: () => void;
+
+  // CORRECTION : Accepte maintenant des données partielles
+  addActiveLineItem: (item?: Partial<LineItem>) => void;
+
   removeActiveLineItem: (index: number) => void;
   resetActiveQuote: () => void;
 }
@@ -129,7 +142,7 @@ interface QuoteStore {
 
 export const useQuoteStore = create<QuoteStore>((set) => ({
   activeQuote: DEFAULT_QUOTE_DATA,
-  userFolders: [], // Pourrait être hydraté depuis le serveur aussi si besoin
+  userFolders: [],
 
   // --- HYDRATATION ---
   setActiveQuote: (quote) => set({ activeQuote: quote }),
@@ -137,22 +150,21 @@ export const useQuoteStore = create<QuoteStore>((set) => ({
   // --- MODIFICATIONS UI ---
   updateActiveQuoteField: (group, field, value) =>
     set((state) => {
-      // CAS 1 : On modifie directement les métadonnées (ex: status)
+      // CAS 1 : On modifie directement les métadonnées
       if (group === "meta") {
         return {
           activeQuote: {
             ...state.activeQuote,
             meta: {
               ...state.activeQuote.meta,
-              [field]: value, // On applique le changement (ex: status = 'sent')
-              updatedAt: getISODate(), // On met à jour la date
+              [field]: value,
+              updatedAt: getISODate(),
             },
           },
         };
       }
 
-      // CAS 2 : On modifie un autre groupe (client, company, quote...)
-      // On met à jour le groupe ciblé ET on rafraîchit la date dans meta
+      // CAS 2 : Autres groupes
       return {
         activeQuote: {
           ...state.activeQuote,
@@ -181,28 +193,47 @@ export const useQuoteStore = create<QuoteStore>((set) => ({
       };
     }),
 
-  addActiveLineItem: () =>
-    set((state) => ({
-      activeQuote: {
-        ...state.activeQuote,
-        items: [
-          ...state.activeQuote.items,
-          {
-            id: generateId(),
-            title: "",
-            subtitle: "",
-            quantity: 1,
-            unitPriceEuros: 0,
-          },
-        ],
-      },
-    })),
+  addActiveLineItem: (itemData) =>
+    set((state) => {
+      // 1. ON NE PREND QUE LA DESCRIPTION COMMERCIALE
+      // Fini la concaténation des "INCLUS :" et "NON INCLUS :"
+      let smartSubtitle = itemData?.subtitle || "";
+
+      if (itemData?.salesCopy?.description) {
+        smartSubtitle = itemData.salesCopy.description;
+      }
+
+      // On arrête ici ! On n'ajoute plus technicalScope.included/excluded au texte.
+
+      return {
+        activeQuote: {
+          ...state.activeQuote,
+          items: [
+            ...state.activeQuote.items,
+            {
+              id: generateId(),
+              title: itemData?.title || "",
+              subtitle: smartSubtitle, // Description propre (juste le pitch)
+              quantity: itemData?.quantity || 1,
+              unitPriceEuros: itemData?.unitPriceEuros || 0,
+
+              // Les données riches sont passées ici, et c'est l'UI qui va décider de les afficher
+              technicalScope: itemData?.technicalScope,
+              pricing: itemData?.pricing,
+              salesCopy: itemData?.salesCopy,
+            },
+          ],
+          meta: { ...state.activeQuote.meta, updatedAt: getISODate() },
+        },
+      };
+    }),
 
   removeActiveLineItem: (index) =>
     set((state) => ({
       activeQuote: {
         ...state.activeQuote,
         items: state.activeQuote.items.filter((_, i) => i !== index),
+        meta: { ...state.activeQuote.meta, updatedAt: getISODate() },
       },
     })),
 

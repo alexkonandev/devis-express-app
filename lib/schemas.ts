@@ -1,26 +1,26 @@
-// lib/schemas.ts
+// Fichier: lib/schemas.ts
+
 import { z } from "zod";
 
 export const serviceItemSchema = z.object({
-  title: z
-    .string()
-    .min(3, "Le titre doit contenir au moins 3 caractères.")
-    .max(100, "Le titre est trop long (max 100)."),
-  description: z
-    .string()
-    .max(500, "La description ne doit pas dépasser 500 caractères.")
-    .optional(),
-  unitPriceEuros: z.coerce
-    .number({ invalid_type_error: "Le prix doit être un nombre." })
-    .min(0, "Le prix ne peut pas être négatif.")
-    .max(100000, "Prix maximum dépassé."),
-  defaultQuantity: z.coerce
-    .number()
-    .int()
-    .min(1, "La quantité par défaut doit être au moins 1.")
-    .optional(),
-  category: z.string().min(1, "La catégorie est requise."),
+  // --- Champs Simples (Éditables via UI Form) ---
+  title: z.string().min(2, "Le titre est requis (min 2 car.)"),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  subcategory: z.string().optional(),
+
+  unitPriceEuros: z.coerce.number().min(0, "Le prix ne peut pas être négatif"),
+  defaultQuantity: z.coerce.number().min(1).default(1),
   isTaxable: z.boolean().default(true),
+
+  // --- Champs Riches (Capsules JSON) ---
+  // On utilise .any() .optional() pour créer un "Tunnel" sécurisé.
+  // Les données complexes passent à travers le formulaire sans être validées strictment,
+  // ce qui évite de les perdre lors d'un edit simple.
+  pricing: z.any().optional(),
+  technicalScope: z.any().optional(),
+  salesCopy: z.any().optional(),
+  marketContext: z.any().optional(),
 });
 
 export type ServiceItemSchema = z.infer<typeof serviceItemSchema>;

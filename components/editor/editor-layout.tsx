@@ -10,6 +10,14 @@ export const EditorLayout = ({ sidebar, header, children }: EditorLayoutProps) =
   return (
     <div className="flex h-full w-full bg-neutral-50 overflow-hidden">
       {/* Main Content Area */}
+
+      <div
+        className="absolute inset-0 z-0 pointer-events-none opacity-[0.4]"
+        style={{
+          backgroundImage: "radial-gradient(#94a3b8 1px, transparent 1px)",
+          backgroundSize: "24px 24px",
+        }}
+      />
       <div className="flex-1 flex flex-col min-w-0 relative">
         {/* Editor Toolbar (Secondary Header) */}
         {header}
@@ -22,12 +30,7 @@ export const EditorLayout = ({ sidebar, header, children }: EditorLayoutProps) =
         </div>
       </div>
 
-      {/* Right Sidebar - Fixed width */}
-      {/* MODIF: Passage de w-80 à w-96 pour matcher la Sidebar */}
-      {/* MODIF: Retrait de overflow-y-auto car la Sidebar gère son scroll interne */}
-      <aside className="w-88 shrink-0 bg-white border-l border-neutral-200 flex flex-col z-20 shadow-xl h-full">
-        {sidebar}
-      </aside>
+      
     </div>
   );
 };
