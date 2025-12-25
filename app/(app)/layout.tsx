@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { AppHeader } from "@/components/app-header";
+import { AppSidebar } from "@/components/app-sidebar"; // Assure-toi que le chemin est bon
 
 interface SoftwareLayoutProps {
   children: React.ReactNode;
@@ -9,15 +9,18 @@ interface SoftwareLayoutProps {
 
 export default function SoftwareLayout({ children }: SoftwareLayoutProps) {
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-neutral-50 font-sans text-neutral-900 selection:bg-neutral-900 selection:text-white">
-      {/* TOP BAR (Fixe en haut) */}
-      <div className="flex-none z-50">
-        <AppHeader />
-      </div>
+    // 1. CHANGEMENT MAJEUR : 'flex' (Row) au lieu de 'flex-col'
+    <div className="flex h-screen w-screen overflow-hidden bg-zinc-50 font-sans text-neutral-900 selection:bg-indigo-500 selection:text-white">
+      {/* 2. LE RAIL LATÉRAL (Fixe à gauche) */}
+      <AppSidebar />
 
-      {/* MAIN CONTENT (Pleine largeur) */}
-      <main className="flex-1 flex flex-col min-h-0 w-full relative overflow-hidden">
-        <div className="flex-1 overflow-y-auto scroll-smooth">
+      {/* 3. LE CONTENU PRINCIPAL (Prend toute la largeur restante) */}
+      <main className="flex-1 flex flex-col h-full min-w-0 relative overflow-hidden">
+        {/* Note : On garde un wrapper scrollable générique ici.
+           Cependant, pour ton éditeur de devis qui a son propre scroll, 
+           il prendra 100% de la hauteur de ce container.
+        */}
+        <div className="flex-1 h-full w-full overflow-y-auto scroll-smooth">
           {children}
         </div>
       </main>

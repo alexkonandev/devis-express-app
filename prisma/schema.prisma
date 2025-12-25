@@ -12,6 +12,27 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+
+model Theme {
+  id          String   @id @default(cuid())
+  name        String   // Ex: "Swiss International", "Tech Unicorn"
+  description String?  // Ex: "Minimaliste & Helvetica"
+  color       String   // Code Hex pour la pastille UI (ex: #000000)
+  
+  // LE LIEN AVEC LE CODE
+  baseLayout  String   // "swiss", "tech", "corporate" (Doit matcher les clés de registry.ts)
+  
+  // LA CONFIGURATION VISUELLE (Stockée en JSON)
+  // Contient { colors: {...}, typography: {...}, borderRadius: "..." }
+  config      Json     
+  
+  isSystem    Boolean  @default(false) // True = Thème officiel de l'app
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isSystem])
+}
 // Schéma pour la bibliothèque de modèles (Ontologie)
 model ServiceTemplate {
   id          String   @id @default(cuid())

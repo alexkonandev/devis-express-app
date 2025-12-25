@@ -1,305 +1,172 @@
 "use client";
 
-import React, { forwardRef } from "react";
-import { Quote } from "@/store/quote.store";
+import { forwardRef, useMemo } from "react";
+import { getLayout, DEFAULT_VARIABLES } from "./themes/registry";
+import { ThemeVariables } from "./themes/types";
 import { cn } from "@/lib/utils";
+import { QuoteHeader } from "./components/QuoteHeader";
+import { QuoteTable } from "./components/QuoteTable";
+import { QuoteTotals } from "./components/QuoteTotals";
 
-// 1. UTILITAIRES
-const formatPrice = (price: number) => {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-  }).format(price);
-};
-
-const formatDate = (date: string | Date) => {
-  if (!date) return "";
-  return new Date(date).toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-};
-
-// 2. CONFIGURATION DES THÈMES
-const THEME_CONFIG = {
-  minimalist: {
-    container: "bg-white font-sans text-neutral-900",
-    header: "border-b pb-8 border-neutral-200",
-    headerTitle: "text-neutral-900",
-    metaLabel: "text-neutral-500",
-    metaValue: "text-neutral-900 font-medium",
-    sectionTitle:
-      "text-xs font-bold uppercase tracking-widest text-neutral-500 mb-4",
-    tableHeader: "border-b border-neutral-200 bg-neutral-50 text-neutral-500",
-    tableRow: "border-b border-neutral-100",
-    totalBox: "bg-neutral-50 border border-neutral-200",
-    accentColor: "text-neutral-900",
-  },
-  executive: {
-    container: "bg-white font-sans text-slate-900",
-    header: "bg-slate-50 p-8 mb-8 border-b border-slate-200",
-    headerTitle: "text-blue-900",
-    metaLabel: "text-blue-400",
-    metaValue: "text-blue-900 font-bold",
-    sectionTitle:
-      "text-xs font-bold uppercase tracking-widest text-blue-800 mb-4 border-b border-blue-100 pb-2",
-    tableHeader: "bg-blue-900 text-white",
-    tableRow: "border-b border-blue-50 even:bg-slate-50",
-    totalBox: "bg-slate-50 border border-blue-100 rounded-lg",
-    accentColor: "text-blue-700",
-  },
-  bold: {
-    container: "bg-white font-sans text-black",
-    header: "bg-black text-white p-8 mb-8",
-    headerTitle: "text-white",
-    metaLabel: "text-neutral-400",
-    metaValue: "text-white font-mono",
-    sectionTitle:
-      "text-xl font-black uppercase tracking-tight text-black mb-4 decoration-4 underline decoration-yellow-400 underline-offset-4",
-    tableHeader: "bg-black text-white border-b-4 border-yellow-400",
-    tableRow: "border-b-2 border-black font-medium",
-    totalBox: "bg-black text-white border-4 border-black",
-    accentColor: "text-black",
-  },
-};
-
-interface PrintableQuoteProps {
-  quote: Quote;
-  theme: "minimalist" | "executive" | "bold";
+// --- TYPES ---
+interface QuoteItem {
+  title: string;
+  subtitle: string;
+  quantity: number;
+  unitPriceEuros: number;
 }
 
-// 3. LE COMPOSANT D'IMPRESSION
+interface ActiveQuote {
+  company: {
+    name: string;
+    email: string;
+    phone: string;
+    address?: string;
+    siret?: string;
+    website?: string;
+  };
+  client: { name: string; email: string; address: string };
+  quote: { number: string; issueDate: string | Date; terms: string };
+  financials: { vatRatePercent: number; discountAmountEuros: number };
+  items: QuoteItem[];
+}
+
+// L'interface de l'objet Theme tel qu'il sort de la DB (via l'action)
+export interface ThemeConfigProp {
+  id: string;
+  baseLayout: string;
+  config: any; // JSON Prisma contenant colors, typography, etc.
+}
+
+interface PrintableQuoteProps {
+  quote: ActiveQuote;
+  theme: ThemeConfigProp; // On exige l'objet complet
+}
+
 const PrintableQuote = forwardRef<HTMLDivElement, PrintableQuoteProps>(
   ({ quote, theme }, ref) => {
-    const t = THEME_CONFIG[theme] || THEME_CONFIG.minimalist;
+    // 1. STRUCTURE (Layout via Registry)
+    // On mappe "swiss" -> swissLayout object
+    const layout = getLayout(theme.baseLayout || "swiss");
 
-    const subTotal = quote.items.reduce(
-      (acc, item) => acc + item.quantity * item.unitPriceEuros,
-      0
-    );
-    const taxAmount = subTotal * (quote.financials.vatRatePercent / 100);
-    const totalTTC =
-      subTotal + taxAmount - quote.financials.discountAmountEuros;
+    // 2. APPARENCE (Config via DB)
+    // On caste la config JSON en types connus
+    const dbConfig = theme.config as Partial<ThemeVariables>;
+
+    // Fusion avec les valeurs par défaut pour éviter tout crash visuel
+    const variables: ThemeVariables = {
+      colors: { ...DEFAULT_VARIABLES.colors, ...dbConfig?.colors },
+      typography: { ...DEFAULT_VARIABLES.typography, ...dbConfig?.typography },
+      borderRadius: dbConfig?.borderRadius || DEFAULT_VARIABLES.borderRadius,
+    };
+
+    // 3. LOGIQUE MÉTIER (Calculs)
+    const totals = useMemo(() => {
+      const subTotal = (quote.items || []).reduce(
+        (acc, item) =>
+          acc + (Number(item.quantity) * Number(item.unitPriceEuros) || 0),
+        0
+      );
+      const discount = Number(quote.financials?.discountAmountEuros) || 0;
+      const vatRate = Number(quote.financials?.vatRatePercent) || 0;
+      const taxable = Math.max(0, subTotal - discount);
+      const taxAmount = taxable * (vatRate / 100);
+      return {
+        subTotal,
+        taxAmount,
+        totalTTC: taxable + taxAmount,
+        discount,
+        vatRate,
+      };
+    }, [quote.items, quote.financials]);
 
     return (
-      <div>
-        {/* Style CSS pour forcer le format A4 et LES POLICES lors de l'impression */}
-        <style type="text/css" media="print">
-          {`
-            @page { size: A4; margin: 0; }
-            
-            body { 
-                -webkit-print-color-adjust: exact; 
-                print-color-adjust: exact;
-                /* On force l'utilisation de Figtree */
-                font-family: 'Figtree', sans-serif !important; 
-            }
+      <div className="relative">
+        {/* INJECTION CSS DYNAMIQUE : Le coeur du système */}
+        <style jsx global>{`
+          .theme-scope-${theme.id} {
+            --primary: ${variables.colors.primary};
+            --secondary: ${variables.colors.secondary};
+            --text: ${variables.colors.text};
+            --bg: ${variables.colors.bg};
+            --border: ${variables.colors.border};
 
-            /* DÉCLARATION FORMELLE DE FIGTREE POUR L'INTÉGRATION PDF */
-            /* Regular */
-            @font-face {
-              font-family: 'Figtree';
-              src: url('https://fonts.gstatic.com/s/figtree/v5/_Xmz-HUzqDCFdgfMm4S9Fr8.ttf') format('truetype');
-              font-weight: 400;
-              font-style: normal;
-              font-display: swap;
-            }
-            
-            /* Bold */
-            @font-face {
-              font-family: 'Figtree';
-              src: url('https://fonts.gstatic.com/s/figtree/v5/_Xmz-HUzqDCFdgfMm4S9Fr8.ttf') format('truetype'); /* Note: Google utilise souvent le même fichier variable, mais déclarer explicitement le poids aide */
-              font-weight: 700;
-              font-style: normal;
-              font-display: swap;
-            }
-          `}
-        </style>
+            --font-family: ${variables.typography.fontFamily};
+            --heading-weight: ${variables.typography.headingWeight};
+
+            --radius: ${variables.borderRadius};
+          }
+        `}</style>
+
+        {/* Chargement conditionnel de la police Google Fonts */}
+        {variables.typography.fontUrl && (
+          <link rel="stylesheet" href={variables.typography.fontUrl} />
+        )}
 
         <div
           ref={ref}
+          id="printable-content" // ID pour l'impression
           className={cn(
-            "w-[210mm] min-h-[297mm] mx-auto p-[15mm] flex flex-col relative bg-white shadow-sm",
-            t.container
+            `theme-scope-${theme.id}`, // Application du Scope CSS
+            "w-[210mm] min-h-[297mm] mx-auto flex flex-col transition-all duration-300 shadow-xl print:shadow-none print:m-0",
+            layout.styles.container // Application des classes Tailwind du Layout
           )}
-          style={{ fontFamily: "'Figtree', sans-serif" }} // Backup inline style
         >
-          {/* --- HEADER --- */}
-          <header className={cn("flex justify-between items-start", t.header)}>
-            <div>
-              <h1
-                className={cn(
-                  "text-4xl font-black uppercase leading-none mb-2",
-                  t.headerTitle
-                )}
-              >
-                Devis
-              </h1>
-              <div className="flex gap-6 mt-4">
-                <div>
-                  <p
-                    className={cn(
-                      "text-[10px] uppercase font-bold",
-                      t.metaLabel
-                    )}
-                  >
-                    Numéro
-                  </p>
-                  <p className={cn("text-sm", t.metaValue)}>
-                    #{quote.quote.number}
-                  </p>
-                </div>
-                <div>
-                  <p
-                    className={cn(
-                      "text-[10px] uppercase font-bold",
-                      t.metaLabel
-                    )}
-                  >
-                    Date
-                  </p>
-                  <p className={cn("text-sm", t.metaValue)}>
-                    {formatDate(quote.quote.issueDate)}
-                  </p>
-                </div>
-              </div>
+          {/* HEADER */}
+          <QuoteHeader layout={layout} quote={quote} />
+
+          {/* CLIENT & META */}
+          <div className="mb-10 flex flex-col gap-2">
+            <span className="text-[9px] font-bold uppercase tracking-widest opacity-40">
+              Destinataire
+            </span>
+            <div
+              className={layout.styles.header.title
+                .replace("text-7xl", "text-xl")
+                .replace("text-5xl", "text-xl")
+                .replace("text-4xl", "text-xl")}
+            >
+              {quote.client.name || "Nom du Client"}
             </div>
-
-            <div className="text-right">
-              <h2 className={cn("text-lg font-bold", t.headerTitle)}>
-                {quote.company.name || "Votre Entreprise"}
-              </h2>
-              <div className={cn("text-xs space-y-1 mt-1 opacity-80")}>
-                <p>{quote.company.email}</p>
-                <p>{quote.company.phone}</p>
-                <p className="max-w-[200px] ml-auto">{quote.company.address}</p>
-              </div>
-            </div>
-          </header>
-
-          {/* --- ADRESSES --- */}
-          <section className="flex justify-between mb-12 px-2">
-            <div className="w-[45%]">
-              <h3 className={t.sectionTitle}>Émetteur</h3>
-              <div className="text-sm leading-relaxed opacity-90">
-                <p className="font-bold">{quote.company.name}</p>
-                <p>{quote.company.address}</p>
-              </div>
-            </div>
-
-            <div className="w-[45%]">
-              <h3 className={t.sectionTitle}>Client</h3>
-              <div className="text-sm leading-relaxed opacity-90">
-                <p className="font-bold text-lg mb-1">{quote.client.name}</p>
-                <p>{quote.client.email}</p>
-                <p>{quote.client.address}</p>
-              </div>
-            </div>
-          </section>
-
-          {/* --- TABLEAU --- */}
-          <section className="mb-8 flex-grow">
-            <table className="w-full text-sm">
-              <thead className={t.tableHeader}>
-                <tr>
-                  <th className="py-3 px-4 text-left font-bold uppercase text-[10px] tracking-wider w-[50%]">
-                    Description
-                  </th>
-                  <th className="py-3 px-4 text-center font-bold uppercase text-[10px] tracking-wider w-[15%]">
-                    Qté
-                  </th>
-                  <th className="py-3 px-4 text-right font-bold uppercase text-[10px] tracking-wider w-[15%]">
-                    Prix U.
-                  </th>
-                  <th className="py-3 px-4 text-right font-bold uppercase text-[10px] tracking-wider w-[20%]">
-                    Total
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {quote.items.map((item, index) => (
-                  <tr key={index} className={t.tableRow}>
-                    <td className="py-4 px-4 align-top">
-                      <p className="font-bold">{item.title}</p>
-                      {item.subtitle && (
-                        <p className="text-xs opacity-60 mt-1 whitespace-pre-wrap">
-                          {item.subtitle}
-                        </p>
-                      )}
-                    </td>
-                    <td className="py-4 px-4 text-center align-top font-mono">
-                      {item.quantity}
-                    </td>
-                    <td className="py-4 px-4 text-right align-top font-mono">
-                      {formatPrice(item.unitPriceEuros)}
-                    </td>
-                    <td className="py-4 px-4 text-right align-top font-mono font-bold">
-                      {formatPrice(item.quantity * item.unitPriceEuros)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-
-          {/* --- TOTAUX --- */}
-          <section className="flex justify-end mb-12">
-            <div className={cn("w-[50%] p-6", t.totalBox)}>
-              <div className="flex justify-between mb-2 text-sm">
-                <span className="opacity-70">Total HT</span>
-                <span className="font-mono font-medium">
-                  {formatPrice(subTotal)}
-                </span>
-              </div>
-
-              {quote.financials.discountAmountEuros > 0 && (
-                <div className="flex justify-between mb-2 text-sm text-green-600">
-                  <span>Remise</span>
-                  <span className="font-mono font-medium">
-                    - {formatPrice(quote.financials.discountAmountEuros)}
-                  </span>
-                </div>
+            <div className="text-xs opacity-70 whitespace-pre-line leading-relaxed max-w-sm">
+              {quote.client.address || "Adresse..."}
+              {quote.client.email && (
+                <p className="mt-1 font-bold italic">{quote.client.email}</p>
               )}
-
-              <div className="flex justify-between mb-4 text-sm">
-                <span className="opacity-70">
-                  TVA ({quote.financials.vatRatePercent}%)
-                </span>
-                <span className="font-mono font-medium">
-                  {formatPrice(taxAmount)}
-                </span>
-              </div>
-
-              <div
-                className={cn(
-                  "flex justify-between pt-4 border-t border-current items-center"
-                )}
-              >
-                <span className="font-bold uppercase tracking-widest text-sm">
-                  Net à payer
-                </span>
-                <span
-                  className={cn(
-                    "text-2xl font-black font-mono",
-                    t.accentColor === "text-black"
-                      ? "text-white"
-                      : t.accentColor
-                  )}
-                >
-                  {formatPrice(totalTTC)}
-                </span>
-              </div>
             </div>
-          </section>
+          </div>
 
-          {/* --- FOOTER --- */}
-          <footer className="text-center text-[10px] opacity-50 uppercase tracking-widest mt-auto pt-8 border-t border-neutral-200">
-            <p className="mb-1">
-              {quote.quote.terms || "Merci de votre confiance."}
-            </p>
-            <p>{quote.company.name} — Généré par Devis Express</p>
+          {/* TOTALS (Top) */}
+          {layout.layoutConfig.totalPosition === "hero-top" && (
+            <QuoteTotals layout={layout} totals={totals} />
+          )}
+
+          {/* TABLEAU */}
+          <div className="flex-1">
+            <QuoteTable layout={layout} quote={quote} />
+          </div>
+
+          {/* TOTALS (Bottom) */}
+          {layout.layoutConfig.totalPosition !== "hero-top" && (
+            <div className="mt-8 flex justify-end">
+              <QuoteTotals layout={layout} totals={totals} />
+            </div>
+          )}
+
+          {/* FOOTER */}
+          <footer className={layout.styles.footer}>
+            <div className="max-w-[70%] text-left">
+              <span className="opacity-40 block mb-1">
+                Conditions & Paiement
+              </span>
+              <p className="normal-case opacity-80 leading-snug">
+                {quote.quote.terms ||
+                  "Paiement à réception de facture. Validité 30 jours."}
+              </p>
+            </div>
+            <div className="text-right self-end opacity-40">
+              {quote.company.name} • {quote.company.website || "Studio"}
+            </div>
           </footer>
         </div>
       </div>

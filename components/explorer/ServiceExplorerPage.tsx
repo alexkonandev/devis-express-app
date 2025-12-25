@@ -281,7 +281,7 @@ export const ServiceExplorerPage = ({
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] w-full bg-zinc-50 overflow-hidden font-sans text-zinc-900">
+    <div className="flex h-screen w-full bg-zinc-50 overflow-hidden font-sans text-zinc-900">
       <ExplorerSidebar
         domains={mappedDomains}
         activeDomainId={activeDomainId}

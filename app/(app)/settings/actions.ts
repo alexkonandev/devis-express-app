@@ -4,7 +4,6 @@ import db from "@/lib/prisma";
 import { getClerkUserId } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
-// Type aligné avec le Schema
 export type SettingsPayload = {
   companyName: string;
   companyEmail: string;
@@ -26,24 +25,20 @@ export async function updateSettingsAction(payload: SettingsPayload) {
     await db.user.update({
       where: { id: userId },
       data: {
-        companyName: payload.companyName,
-        companyEmail: payload.companyEmail,
-        companyPhone: payload.companyPhone,
-        companyAddress: payload.companyAddress,
-        companySiret: payload.companySiret,
-        companyWebsite: payload.companyWebsite,
-        quotePrefix: payload.quotePrefix,
-        nextQuoteNumber: payload.nextQuoteNumber,
-        defaultVatRate: payload.defaultVatRate,
-        defaultTerms: payload.defaultTerms,
+        ...payload,
+        // On s'assure que nextQuoteNumber est bien un int
+        nextQuoteNumber: Number(payload.nextQuoteNumber),
+        defaultVatRate: Number(payload.defaultVatRate),
       },
     });
 
+    // On revalide tout pour que l'éditeur reçoive les nouvelles infos instantanément
     revalidatePath("/settings");
-    revalidatePath("/devis/new"); // Pour que le prochain devis prenne les nouveaux réglages
-    return { success: true, message: "Paramètres mis à jour." };
+    revalidatePath("/editor");
+
+    return { success: true, message: "Configuration sauvegardée." };
   } catch (error) {
     console.error("Erreur Settings:", error);
-    return { success: false, error: "Erreur lors de la sauvegarde." };
+    return { success: false, error: "Erreur technique lors de la sauvegarde." };
   }
 }

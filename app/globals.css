@@ -120,3 +120,51 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* --- LOGIQUE D'IMPRESSION PRO --- */
+@media print {
+  /* 1. On cache TOUT par défaut */
+  body * {
+    visibility: hidden;
+    overflow: visible !important;
+  }
+
+  /* 2. On rend visible UNIQUEMENT la feuille A4 */
+  #printable-content, 
+  #printable-content * {
+    visibility: visible;
+  }
+
+  /* 3. On positionne la feuille en absolu pour qu'elle prenne toute la page */
+  #printable-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: none !important;
+    box-shadow: none !important;
+    background: white !important;
+  }
+
+  /* 4. Réglages techniques pour forcer l'impression des couleurs de fond */
+  @page {
+    size: A4;
+    margin: 0mm; /* On laisse le padding du composant gérer les marges */
+  }
+
+  html, body {
+    height: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden;
+    background: white;
+  }
+
+  /* Force les navigateurs à imprimer les background-color (ex: le gris des totaux) */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

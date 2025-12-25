@@ -151,7 +151,7 @@ export default function CatalogControlCenter({
   // ===========================================================================
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] w-full bg-white text-zinc-900 font-sans overflow-hidden">
+    <div className="flex h-screen w-full bg-white text-zinc-900 font-sans overflow-hidden">
       {/* SIDEBAR : Navigation & PROMO EXPLORER */}
       <aside className="w-64 shrink-0 border-r border-zinc-200 bg-zinc-50 flex flex-col z-10">
         {/* ZONE PROMO : Monétisation */}
