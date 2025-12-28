@@ -42,7 +42,7 @@ import { Badge } from "@/components/ui/badge"; // Assure-toi d'avoir ce composan
 import {
   createFolderAction,
   searchDevisAction,
-} from "@/app/(app)/devis/actions";
+} from "@/app/(app)/dashboard/actions";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useClerk } from "@clerk/nextjs";
 

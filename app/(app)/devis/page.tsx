@@ -1,93 +1,50 @@
-// app/devis/page.tsx (Server Component)
-
-import  db  from "@/lib/prisma"; // Utilise le Named Export du client Prisma
-import SuiviDevisClient, { Quote } from "./SuiviDevisClient"; // Importe le Client Component et son Type
-import { getClerkUserId, getCurrentUser } from "@/lib/auth"; // Fonctions d'Auth Clerk
 import { redirect } from "next/navigation";
+import { getClerkUserId } from "@/lib/auth";
+import QuotesListView from "@/components/quotes/quotes-list-view";
+import { getQuotesListAction } from "@/app/actions/quote-list.actions";
 
-// Définition de la fonction de récupération et de formatage des données
-// Cette fonction reste côté serveur (Server Component)
-async function getQuotesData(userId: string): Promise<Quote[]> {
-  // 1. Récupération optimisée des données
-  const devisList = await db.devis.findMany({
-    where: { userId: userId },
-    include: {
-      client: true, // On récupère les infos du client lié
-    },
-    orderBy: { createdAt: "desc" },
-  });
+export const metadata = {
+  title: "Gestion des Devis | DevisExpress",
+};
 
-  // 2. Transformation des données pour l'UI (Mapping)
-  const formattedQuotes: Quote[] = devisList.map((d) => {
-    // Calcul de la date de validité (ex: +30 jours par défaut)
-    const validite = new Date(d.createdAt);
-    validite.setDate(validite.getDate() + 30);
-
-    // Extraction sécurisée du titre du projet depuis le JSON itemsData
-    const items = d.itemsData as any[];
-    // Utilise le titre du premier article comme titre du projet
-    const projetTitle =
-      items && items.length > 0 ? items[0].title : `Devis N°${d.number}`;
-
-    return {
-      id: d.id,
-      client: d.client.name,
-      email_client: d.client.email || "",
-      projet: projetTitle,
-      date_creation: d.createdAt.toISOString(),
-      date_validite: validite.toISOString(),
-      statut: d.isSent ? "Envoyé" : "Brouillon",
-      montant_ht: d.totalTTC, // Montant TTC pour affichage rapide
-    };
-  });
-
-  return formattedQuotes;
+// Next.js 15 : searchParams est une Promise
+interface PageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export default async function SuiviDevisPage() {
-  try {
-    const clerkUserId = await getClerkUserId();
+export default async function DevisListPage({ searchParams }: PageProps) {
+  const userId = await getClerkUserId();
+  if (!userId) redirect("/sign-in");
 
-    if (!clerkUserId) {
-      // Stratégie : Rediriger si non connecté (meilleure UX que d'afficher une erreur)
-      // Assurez-vous que votre Middleware Next.js gère la route /sign-in
-      redirect("/sign-in");
-    }
+  // --- CORRECTION NEXT.JS 15 ---
+  // On "unwrap" la promise avant d'accéder aux propriétés
+  const resolvedParams = await searchParams;
 
-    // --- SYNCHRONISATION PRISMA / CLERK (Upsert) ---
+  // Extraction et nettoyage sécurisé
+  const page =
+    typeof resolvedParams.page === "string" ? parseInt(resolvedParams.page) : 1;
+  const search =
+    typeof resolvedParams.search === "string" ? resolvedParams.search : "";
+  const status =
+    typeof resolvedParams.status === "string" ? resolvedParams.status : "all";
+  const sortBy =
+    typeof resolvedParams.sortBy === "string"
+      ? resolvedParams.sortBy
+      : "updatedAt";
+  const sortDir = (resolvedParams.sortDir === "asc" ? "asc" : "desc") as
+    | "asc"
+    | "desc";
 
-    // Récupérer le profil complet de Clerk pour obtenir l'email
-    const clerkUser = await getCurrentUser();
-    const userEmail =
-      clerkUser?.emailAddresses?.[0]?.emailAddress ??
-      "email_non_defini@clerk.com";
+  // Appel de la Server Action (qui contient maintenant la logique corrigée)
+  const result = await getQuotesListAction({
+    page,
+    pageSize: 20,
+    search,
+    status,
+    sortBy,
+    sortDir,
+  });
 
-    // Création ou mise à jour de l'utilisateur dans notre base de données Neon
-    // L'ID est CLERK_ID, l'email est synchronisé.
-    await db.user.upsert({
-      where: { id: clerkUserId },
-      update: { email: userEmail }, // Mise à jour de l'email si Clerk le change
-      create: {
-        id: clerkUserId,
-        email: userEmail,
-        // Les autres champs (companyName, etc.) sont initialisés à null
-      },
-    });
-    // --------------------------------------------------
-
-    // Récupération des données pour l'utilisateur synchronisé
-    const quotes = await getQuotesData(clerkUserId);
-
-    // 3. Rendu du Client Component avec les données initiales
-    return <SuiviDevisClient initialQuotes={quotes} />;
-  } catch (error) {
-    console.error("Erreur critique dans SuiviDevisPage:", error);
-    // En cas d'échec DB (ex: connexion perdue), afficher un message d'erreur fatal
-    return (
-      <div className="p-10 text-red-600 font-bold text-center">
-        Erreur critique de la base de données. Veuillez contacter le support
-        technique.
-      </div>
-    );
-  }
+  // On passe le résultat à la vue (qui doit gérer initialData.success)
+  return <QuotesListView initialData={result} />;
 }

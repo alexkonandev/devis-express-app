@@ -1,29 +1,35 @@
 "use client";
 
 import React from "react";
-import { AppSidebar } from "@/components/app-sidebar"; // Assure-toi que le chemin est bon
+import { AppSidebar } from "@/components/app-sidebar";
+import { AppTopBar } from "@/components/app-top-bar";
 
 interface SoftwareLayoutProps {
   children: React.ReactNode;
 }
 
 export default function SoftwareLayout({ children }: SoftwareLayoutProps) {
-  return (
-    // 1. CHANGEMENT MAJEUR : 'flex' (Row) au lieu de 'flex-col'
-    <div className="flex h-screen w-screen overflow-hidden bg-zinc-50 font-sans text-neutral-900 selection:bg-indigo-500 selection:text-white">
-      {/* 2. LE RAIL LATÉRAL (Fixe à gauche) */}
-      <AppSidebar />
+  const TOPBAR_HEIGHT = "40px";
 
-      {/* 3. LE CONTENU PRINCIPAL (Prend toute la largeur restante) */}
-      <main className="flex-1 flex flex-col h-full min-w-0 relative overflow-hidden">
-        {/* Note : On garde un wrapper scrollable générique ici.
-           Cependant, pour ton éditeur de devis qui a son propre scroll, 
-           il prendra 100% de la hauteur de ce container.
-        */}
-        <div className="flex-1 h-full w-full overflow-y-auto scroll-smooth">
+  return (
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-white font-sans text-zinc-900">
+      {/* 1. TOPBAR : Largeur Totale (W-FULL) */}
+      <div style={{ height: TOPBAR_HEIGHT }} className="w-full shrink-0 z-50">
+        <AppTopBar />
+      </div>
+
+      {/* 2. BODY : Sidebar + Main */}
+      <div className="flex flex-1 w-full overflow-hidden">
+        {/* SIDEBAR : Sa hauteur sera automatiquement calculée par le flex-1 du parent */}
+        <aside className="h-full shrink-0">
+          <AppSidebar />
+        </aside>
+
+        {/* CONTENU PRINCIPAL */}
+        <main className="flex-1 relative overflow-hidden bg-zinc-50/50">
           {children}
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

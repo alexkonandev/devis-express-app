@@ -63,7 +63,7 @@ const Header = () => (
           Connexion
         </Link>
         <Link
-          href="/devis/new"
+          href="/editor"
           className="bg-neutral-950 hover:bg-neutral-800 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-all flex items-center gap-2"
         >
           Créer un devis <ArrowRight className="w-4 h-4" />

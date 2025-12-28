@@ -10,7 +10,7 @@ import {
   Package,
   Settings,
   PlusSquare,
-  FileText,
+  FileText, // <--- NOUVEL IMPORT
 } from "lucide-react";
 
 import {
@@ -22,8 +22,10 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
+// LISTE DE NAVIGATION MISE À JOUR
 const MAIN_NAV = [
-  { label: "Tableau de bord", href: "/devis", icon: LayoutDashboard },
+  { label: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Mes Devis", href: "/devis", icon: FileText }, // <--- NOUVEAU LIEN
   { label: "Clients", href: "/clients", icon: Users },
   { label: "Catalogue", href: "/items", icon: Package },
 ];
@@ -34,21 +36,16 @@ export function AppSidebar() {
   const { signOut } = useClerk();
 
   return (
-    // CHANGEMENT 1 : Fond blanc, bordure grise, texte sombre
-    <aside className="h-screen w-[60px] bg-white flex flex-col items-center py-4 gap-6 shrink-0 z-50 border-r border-zinc-200 text-zinc-900">
-      {/* 1. LOGO */}
-      <Link href="/devis" className="shrink-0 mb-2">
-        {/* On garde la touche de couleur (Indigo) pour l'identité visuelle */}
-        <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-md shadow-indigo-200 hover:scale-105 transition-transform">
-          <FileText className="w-5 h-5 text-white" strokeWidth={3} />
-        </div>
-      </Link>
-
-      {/* 2. NAVIGATION PRINCIPALE */}
+    <aside className="h-[calc(100vh-40px)] w-[60px] bg-white flex flex-col items-center py-4 gap-6 shrink-0 z-50 border-r border-zinc-200 text-zinc-900">
+      {/* NAVIGATION PRINCIPALE */}
       <nav className="flex flex-col gap-3 w-full px-2">
         {MAIN_NAV.map((item) => {
-          // Logique pour vérifier si on est sur la page ou une sous-page
-          const isActive = pathname.startsWith(item.href);
+          // Logique stricte : active si le path commence par le href,
+          // sauf pour dashboard où on veut éviter que tout soit actif
+          const isActive =
+            item.href === "/dashboard"
+              ? pathname === "/dashboard"
+              : pathname.startsWith(item.href);
 
           return (
             <TooltipProvider key={item.href} delayDuration={0}>
@@ -59,8 +56,8 @@ export function AppSidebar() {
                     className={cn(
                       "w-full h-10 flex items-center justify-center rounded-lg transition-all duration-200 group relative",
                       isActive
-                        ? "bg-zinc-100 text-zinc-900" // Actif : Fond gris léger, texte noir
-                        : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50" // Inactif : Gris moyen -> Noir au survol
+                        ? "bg-zinc-100 text-zinc-900"
+                        : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50"
                     )}
                   >
                     <item.icon
@@ -68,13 +65,12 @@ export function AppSidebar() {
                       strokeWidth={isActive ? 2.5 : 2}
                     />
 
-                    {/* Indicateur actif (Petite barre Indigo à gauche) */}
+                    {/* Indicateur actif */}
                     {isActive && (
                       <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-indigo-600 rounded-r-full" />
                     )}
                   </Link>
                 </TooltipTrigger>
-                {/* Tooltip reste noir pour le contraste */}
                 <TooltipContent
                   side="right"
                   className="bg-zinc-900 text-white border-none font-medium text-xs"
@@ -87,14 +83,14 @@ export function AppSidebar() {
         })}
       </nav>
 
-      {/* 3. ACTION CREATE (Séparée) */}
+      {/* ACTION CREATE */}
       <div className="w-full px-2 mt-auto pb-4 border-b border-zinc-100">
         <TooltipProvider delayDuration={0}>
           <Tooltip>
             <TooltipTrigger asChild>
+              {/* Le lien pointe vers /devis/new qui est la route logique pour créer */}
               <Link
-                href="/devis/new"
-                // CHANGEMENT 2 : Le bouton devient Noir (Inversion) pour ressortir sur le fond blanc
+                href="/editor"
                 className="w-full h-10 flex items-center justify-center rounded-lg bg-zinc-900 text-white hover:bg-zinc-800 transition-colors shadow-md shadow-zinc-200"
               >
                 <PlusSquare className="w-5 h-5" strokeWidth={2.5} />
@@ -110,7 +106,7 @@ export function AppSidebar() {
         </TooltipProvider>
       </div>
 
-      {/* 4. SETTINGS & USER */}
+      {/* SETTINGS & USER */}
       <div className="flex flex-col gap-4 items-center">
         <TooltipProvider delayDuration={0}>
           <Tooltip>

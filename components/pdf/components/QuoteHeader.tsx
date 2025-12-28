@@ -1,5 +1,5 @@
 import React from "react";
-import { ThemeLayout } from "../themes/types"; // Assure-toi que le chemin est bon
+import { ThemeLayout } from "../types"; // Assure-toi que le chemin est bon
 
 interface ActiveQuote {
   title: string;

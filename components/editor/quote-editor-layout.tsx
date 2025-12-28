@@ -49,7 +49,7 @@ export const QuoteEditorLayout = ({
   };
 
   return (
-    <div className="flex h-screen w-full bg-[#F5F5F5] overflow-hidden font-sans text-xs antialiased select-none">
+    <div className="flex h-full w-full bg-[#F5F5F5] overflow-hidden font-sans text-xs antialiased select-none">
       {/* --- GAUCHE : ANIMATION TIROIR --- */}
       <aside
         className={cn(

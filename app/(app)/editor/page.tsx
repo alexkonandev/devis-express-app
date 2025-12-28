@@ -5,40 +5,44 @@ import {
   getTemplatesAction,
   searchCatalogItemsAction,
 } from "@/app/actions/item.actions";
-// IMPORT DE L'ACTION THÈMES
 import { getSystemThemesAction } from "@/app/actions/theme.actions";
+// 1. IMPORT DE L'ACTION CLIENTS
+import { getClientsAction } from "@/app/actions/client.actions";
 
 import CreateQuoteClient from "@/components/editor/CreateQuoteClient";
 
 export default async function EditorPage() {
-  // 1. SÉCURITÉ
   const userId = await getClerkUserId();
   if (!userId) redirect("/sign-in");
 
-  // 2. FETCHING PARALLÈLE (Performance optimale)
-  const [catalogData, templatesResponse, themesResponse, user] =
-    await Promise.all([
-      searchCatalogItemsAction(""), // Catalogue items
-      getTemplatesAction(), // Templates services
-      getSystemThemesAction(), // <--- Récupération des thèmes
-      db.user.findUnique({ where: { id: userId } }), // Infos user
-    ]);
+  // 2. AJOUT DU FETCH CLIENTS DANS LE PROMISE.ALL
+  const [
+    catalogData,
+    templatesResponse,
+    themesResponse,
+    clientsResponse,
+    user,
+  ] = await Promise.all([
+    searchCatalogItemsAction(""),
+    getTemplatesAction(),
+    getSystemThemesAction(),
+    getClientsAction(), // <--- Récupération des clients (CRM)
+    db.user.findUnique({ where: { id: userId } }),
+  ]);
 
-  // 3. GESTION DES ERREURS / REDIRECTIONS
   if (!user) redirect("/settings");
 
-  // Sécurisation des données retournées
   const safeTemplates =
     templatesResponse.success && templatesResponse.data
       ? templatesResponse.data
       : [];
-
   const safeThemes =
     themesResponse.success && themesResponse.data ? themesResponse.data : [];
-
   const safeCatalog = catalogData || [];
+  // 3. SÉCURISATION DES CLIENTS
+  const safeClients =
+    clientsResponse.success && clientsResponse.data ? clientsResponse.data : [];
 
-  // 4. PRÉPARATION DU DTO (Data Transfer Object)
   const userSettings = {
     companyName: user.companyName || "",
     companyEmail: user.companyEmail || "",
@@ -56,7 +60,8 @@ export default async function EditorPage() {
     <CreateQuoteClient
       initialCatalog={safeCatalog}
       initialTemplates={safeTemplates}
-      initialThemes={safeThemes} // <--- Injection des Thèmes dans le Client
+      initialThemes={safeThemes}
+      initialClients={safeClients} // <--- Injection dans le Client Component
       userSettings={userSettings}
     />
   );
