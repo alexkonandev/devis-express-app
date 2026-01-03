@@ -3,8 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, Slash } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ChevronRight } from "lucide-react";
 
 // --- LE DICTIONNAIRE INTELLIGENT ---
 const PATH_MAP: Record<string, string> = {
@@ -14,8 +13,9 @@ const PATH_MAP: Record<string, string> = {
   devis: "Gestion des Devis",
   new: "Nouveau Projet",
   settings: "Paramètres",
-  editor: "Studio Éditeur", // <--- La traduction critique
+  editor: "Studio Éditeur",
   preview: "Aperçu Client",
+  billing: "Abonnement", // <--- AJOUT CRUCIAL
 };
 
 export function AppBreadcrumb() {
@@ -29,13 +29,9 @@ export function AppBreadcrumb() {
       {segments.map((segment, index) => {
         const href = `/${segments.slice(0, index + 1).join("/")}`;
         const isLast = index === segments.length - 1;
-
-        // 1. Traduction
         let label = PATH_MAP[segment];
 
-        // 2. Gestion des IDs (si pas dans le dictionnaire et long)
         if (!label) {
-          // Si c'est un ID long (ex: cl6...) on met une version courte ou générique
           label =
             segment.length > 20
               ? `#${segment.slice(-6).toUpperCase()}`
@@ -44,9 +40,7 @@ export function AppBreadcrumb() {
 
         return (
           <div key={href} className="flex items-center">
-            {/* Séparateur (Sauf pour le premier, car on a le logo avant) */}
             <ChevronRight className="w-3 h-3 text-zinc-300 mx-1" />
-
             {isLast ? (
               <span className="text-[11px] font-bold text-zinc-900 capitalize select-none bg-zinc-100 px-1.5 py-0.5 rounded-[4px] border border-zinc-200/50">
                 {label}

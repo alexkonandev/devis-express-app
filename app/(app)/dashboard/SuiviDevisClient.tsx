@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   MoreHorizontal,
   Download,
@@ -9,11 +9,9 @@ import {
   Plus,
   Search,
   ArrowUpRight,
-  Filter,
   Calendar,
   FileText,
   TrendingUp,
-  AlertCircle,
 } from "lucide-react";
 import {
   DropdownMenu,

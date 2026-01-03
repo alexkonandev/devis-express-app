@@ -1,11 +1,9 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client"
+  // NOTE : Si tu as des soucis d'import sur Vercel, enlève la ligne output pour laisser par défaut
   output   = "../app/generated/prisma"
 }
 
@@ -13,6 +11,36 @@ datasource db {
   provider = "postgresql"
 }
 
+// ==========================================
+// 1. GESTION DES LIMITES & ABONNEMENTS (NOUVEAU)
+// ==========================================
+
+model UserApiLimit {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  count     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relation optionnelle si tu veux la cascade delete
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserSubscription {
+  id                     String    @id @default(cuid())
+  userId                 String    @unique
+  stripeCustomerId       String?   @unique @map(name: "stripe_customer_id")
+  stripeSubscriptionId   String?   @unique @map(name: "stripe_subscription_id")
+  stripePriceId          String?   @map(name: "stripe_price_id")
+  stripeCurrentPeriodEnd DateTime? @map(name: "stripe_current_period_end")
+  
+  // Relation optionnelle
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ==========================================
+// 2. DESIGN SYSTEM & ONTOLOGIE
+// ==========================================
 
 model Theme {
   id          String   @id @default(cuid())
@@ -21,36 +49,27 @@ model Theme {
   color       String   // Code Hex pour la pastille UI (ex: #000000)
   
   // LE LIEN AVEC LE CODE
-  baseLayout  String   // "swiss", "tech", "corporate" (Doit matcher les clés de registry.ts)
+  baseLayout  String   // "swiss", "tech", "corporate"
   
-  // LA CONFIGURATION VISUELLE (Stockée en JSON)
-  // Contient { colors: {...}, typography: {...}, borderRadius: "..." }
+  // CONFIGURATION VISUELLE
   config      Json     
   
-  isSystem    Boolean  @default(false) // True = Thème officiel de l'app
+  isSystem    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([isSystem])
 }
-// Schéma pour la bibliothèque de modèles (Ontologie)
+
 model ServiceTemplate {
   id          String   @id @default(cuid())
-  category    String   // Tech, Design, Marketing, etc.
-  subcategory String   // DevOps, SEO, Branding...
-  title       String   // Titre interne
+  category    String   
+  subcategory String   
+  title       String   
   
-  // Données riches stockées en JSON structuré
-  // Contient: headline, description, key_benefits
   salesCopy      Json   
-  
-  // Contient: included[], excluded[]
   technicalScope Json   
-  
-  // Contient: suggested_model, tiers { junior, senior, expert }
   pricing        Json   
-  
-  // Contient: trend, insight
   marketContext  Json   
 
   createdAt   DateTime @default(now())
@@ -60,46 +79,9 @@ model ServiceTemplate {
   @@index([subcategory])
 }
 
-// SERVICE ITEM (Catalogue des Prestations)
-
-// SERVICE ITEM (Catalogue des Prestations)
-model ServiceItem {
-  id              String    @id @default(cuid())
-  userId          String    
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // INFOS DE BASE
-  title           String    
-  description     String?   
-  category        String?   
-  
-  // PRICING SIMPLE (Pour affichage liste rapide)
-  unitPriceEuros  Float     
-  defaultQuantity Float     @default(1) 
-  isTaxable       Boolean   @default(true) 
-
-  // --- HARMONISATION AVEC SERVICE TEMPLATE ---
-  // C'est ici qu'on stocke la richesse de l'offre
-  
-  // Structure: { headline, description, key_benefits[] }
-  salesCopy       Json?     
-  
-  // Structure: { included[], excluded[] }
-  technicalScope  Json?     
-  
-  // Structure: { tiers: { junior, senior, expert }, suggested_model }
-  pricing         Json?     
-  
-  // Structure: { trend, insight } (Optionnel mais bon pour le futur)
-  marketContext   Json?     
-
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  @@index([userId])
-  @@unique([userId, title]) 
-  @@map("service_items")
-}
+// ==========================================
+// 3. UTILISATEURS & OFFRES
+// ==========================================
 
 model User {
   id        String    @id @default(cuid()) 
@@ -110,49 +92,81 @@ model User {
   companyEmail   String?
   companyPhone   String?
   companyAddress String?
-  companySiret   String?   // NOUVEAU
-  companyWebsite String?   // NOUVEAU (Pour remplir l'espace)
+  companySiret   String?   
+  companyWebsite String?   
 
-  // Paramètres de Facturation (Automatisation)
+  // Paramètres de Facturation
   quotePrefix    String    @default("DEV-")
   nextQuoteNumber Int      @default(1)
   defaultVatRate Float     @default(20.0)
-  defaultTerms   String?   // Mentions légales par défaut
+  defaultTerms   String?   
 
-  Clients   Client[]
-  Devis     Devis[]
- ServiceItems ServiceItem[]
+  // Relations Métier
+  Clients      Client[]
+  Devis        Devis[]
+  ServiceItems ServiceItem[]
+
+  // Relations Système (NOUVEAU)
+  apiLimit     UserApiLimit?
+  subscription UserSubscription?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
   @@map("users")
 }
 
-// 2. CLIENT (Destinataire réutilisable)
+model ServiceItem {
+  id              String    @id @default(cuid())
+  userId          String    
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title           String    
+  description     String?   
+  category        String?   
+  
+  unitPriceEuros  Float     
+  defaultQuantity Float     @default(1) 
+  isTaxable       Boolean   @default(true) 
+
+  salesCopy       Json?     
+  technicalScope  Json?     
+  pricing         Json?     
+  marketContext   Json?     
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
+  @@unique([userId, title]) 
+  @@map("service_items")
+}
+
+// ==========================================
+// 4. CRM & FACTURATION
+// ==========================================
+
 model Client {
   id        String    @id @default(cuid())
   userId    String    
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade) 
-  // Note: onDelete: Cascade permet de supprimer les clients si l'user supprime son compte
 
   name      String
   email     String?
-  phone     String?   // NOUVEAU : Indispensable pour le CRM
+  phone     String?   
   address   String?
-  siret     String?   // NOUVEAU : Critique pour la conformité B2B (TVA Intra, etc.)
-  notes     String?   // NOUVEAU : Pour noter des infos (ex: "Contact: Mme Durand")
+  siret     String?   
+  notes     String?   
 
   Devis     Devis[]   
 
-  createdAt DateTime  @default(now()) // NOUVEAU : Pour le tri
-  updatedAt DateTime  @updatedAt      // NOUVEAU : Pour le tri
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   
-  // Cette contrainte est très bien pour éviter les doublons stricts
   @@unique([userId, name]) 
   @@map("clients")
 }
 
-// 3. DEVIS (Document Principal et Transaction)
 model Devis {
   id          String    @id @default(cuid())
   userId      String
@@ -161,24 +175,17 @@ model Devis {
   clientId    String    
   client      Client    @relation(fields: [clientId], references: [id])
   
-  // Champs critiques
   number      String    @unique
   issueDate   DateTime  
   
-  // NOUVEAU : Gestion complète du cycle de vie
-  // Valeurs possibles : 'draft', 'sent', 'accepted', 'rejected', 'archived'
   status      String    @default("draft") 
-  
-  // NOUVEAU : Date d'échéance (pour les alertes KPI)
   validityDate DateTime?
 
   totalTTC    Float     
 
-  // Champs Financiers
   vatRatePercent      Float @default(20) 
   discountAmountEuros Float @default(0)  
 
-  // Contenu
   itemsData   Json      
   terms       String?   
   

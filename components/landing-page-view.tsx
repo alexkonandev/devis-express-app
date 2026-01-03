@@ -11,7 +11,14 @@ import {
   ShieldCheck,
   Server,
   Lock,
+  LayoutDashboard,
+  CreditCard, // J'ai ajouté l'icône carte pour le bouton
 } from "lucide-react";
+
+// --- PROPS INTERFACE ---
+interface LandingPageViewProps {
+  userId: string | null;
+}
 
 // --- UI COMPONENTS ---
 
@@ -48,65 +55,79 @@ const Button = ({
 
 // --- VIEW COMPONENT ---
 
-export default function LandingPageView() {
+export default function LandingPageView({ userId }: LandingPageViewProps) {
+  // 1. STRATÉGIE GÉNÉRALE (Hero, Navbar) -> Vers le travail
+  const mainActionLink = userId ? "/dashboard" : "/sign-up";
+
+  // 2. STRATÉGIE DE PAIEMENT (Pricing) -> Vers l'argent
+  // Si connecté : on va payer sur /billing
+  // Si pas connecté : on s'inscrit d'abord
+  const billingUrl = userId ? "/billing" : "/sign-up";
+
   return (
     <main className="min-h-screen bg-zinc-50 text-zinc-900 selection:bg-black selection:text-white font-sans overflow-x-hidden">
-      {/* 1. NAVBAR (Minimalist) */}
+      {/* 1. NAVBAR */}
       <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-zinc-200/50">
         <div className="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Image
-              src="/logo.png"
-              alt="DE"
-              width={90}
-              height={30}
-              className="h-5 w-auto object-contain"
-              priority
-            />
+            <span className="font-black text-xl tracking-tighter">
+              DEVIS<span className="text-emerald-500">EXPRESS</span>
+            </span>
           </div>
           <div className="flex items-center gap-4">
-            <Link
-              href="/sign-in"
-              className="text-xs font-bold uppercase tracking-wide text-zinc-500 hover:text-black transition-colors"
-            >
-              Login
-            </Link>
-            <Link
-              href="/sign-up"
-              className="bg-black text-white text-xs font-bold uppercase tracking-wide px-4 py-2 rounded hover:bg-zinc-800 transition-colors"
-            >
-              Get Started
-            </Link>
+            {userId ? (
+              <Link
+                href="/dashboard"
+                className="bg-black text-white text-xs font-bold uppercase tracking-wide px-4 py-2 rounded hover:bg-zinc-800 transition-colors flex items-center gap-2"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                Mon Espace
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/sign-in"
+                  className="text-xs font-bold uppercase tracking-wide text-zinc-500 hover:text-black transition-colors"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/sign-up"
+                  className="bg-black text-white text-xs font-bold uppercase tracking-wide px-4 py-2 rounded hover:bg-zinc-800 transition-colors"
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
 
-      {/* 2. HERO SECTION (Split & Asymmetric) */}
+      {/* 2. HERO SECTION */}
       <section className="pt-32 pb-20 px-6 max-w-[1400px] mx-auto grid lg:grid-cols-2 gap-12 items-center">
         {/* Left: Content */}
         <div className="max-w-xl space-y-8">
-          <Badge>Early Access V2.0</Badge>{" "}
-          {/* Honnêteté : C'est une V2 en accès anticipé */}
+          <Badge>Early Access V2.0</Badge>
           <h1 className="text-6xl md:text-8xl font-black tracking-tighter leading-[0.9]">
             FACTURATION <br />
             <span className="text-zinc-400">SANS FRICTION.</span>
           </h1>
           <p className="text-xl text-zinc-500 font-medium leading-relaxed max-w-md">
-            L'architecture de facturation pensée pour l'ère digitale.
+            L&apos;architecture de facturation pensée pour l&apos;ère digitale.
             Standardisez vos processus. Sécurisez vos revenus.
             <span className="block mt-2 text-black underline decoration-2 decoration-zinc-300 underline-offset-4">
-              Conçu pour l'efficacité pure.
+              Conçu pour l&apos;efficacité pure.
             </span>
           </p>
           <div className="flex flex-wrap gap-4">
-            <Button href="/sign-up" variant="primary">
-              Créer un compte
+            <Button href={mainActionLink} variant="primary">
+              {userId ? "Ouvrir l'éditeur" : "Créer un compte"}
             </Button>
-            <Button href="#demo" variant="secondary">
-              Voir la Démo
+            <Button href="#pricing" variant="secondary">
+              Voir les offres
             </Button>
           </div>
-          {/* Remplacement des Fake Stats par des Garanties Techniques */}
+
           <div className="pt-8 flex flex-wrap gap-6 text-xs font-bold uppercase tracking-wider text-zinc-400">
             <div className="flex items-center gap-2">
               <Check className="w-4 h-4 text-emerald-500" /> Auto-Entrepreneur
@@ -120,12 +141,10 @@ export default function LandingPageView() {
           </div>
         </div>
 
-        {/* Right: The Product (CSS Mockup with Perspective) */}
+        {/* Right: The Product (Visual) */}
         <div className="relative h-[500px] w-full hidden lg:block perspective-1000">
           <div className="absolute inset-0 bg-gradient-to-tr from-zinc-200 to-zinc-50 rounded-3xl transform rotate-y-12 rotate-x-6 shadow-2xl border border-white/50 p-4 transition-transform duration-700 hover:rotate-y-6 hover:rotate-x-3">
-            {/* Abstract Dashboard UI - Clean & Technical */}
             <div className="h-full w-full bg-white rounded-xl shadow-inner p-6 flex flex-col gap-4 overflow-hidden relative">
-              {/* Header UI */}
               <div className="flex justify-between items-center border-b border-zinc-100 pb-4">
                 <div className="space-y-1">
                   <div className="w-32 h-4 bg-zinc-100 rounded" />
@@ -133,7 +152,6 @@ export default function LandingPageView() {
                 </div>
                 <div className="w-8 h-8 bg-zinc-900 rounded-full" />
               </div>
-              {/* Body UI */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="h-24 bg-zinc-50 rounded-lg border border-zinc-100 flex items-center justify-center">
                   <Zap className="text-zinc-200 w-8 h-8" />
@@ -144,7 +162,6 @@ export default function LandingPageView() {
                   <span className="font-bold text-lg">---,00 €</span>
                 </div>
               </div>
-              {/* List UI */}
               <div className="flex-1 bg-zinc-50 rounded-lg border border-zinc-100 mt-4 p-4 space-y-3">
                 <div className="flex justify-between items-center">
                   <div className="w-1/3 h-3 bg-zinc-200 rounded-full opacity-50" />
@@ -154,8 +171,6 @@ export default function LandingPageView() {
                 <div className="w-5/6 h-3 bg-zinc-200 rounded-full opacity-40" />
                 <div className="w-full h-1 bg-zinc-200 mt-4 opacity-20" />
               </div>
-
-              {/* Floating Badge */}
               <div className="absolute bottom-6 right-6 bg-emerald-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg">
                 READY TO SEND
               </div>
@@ -168,16 +183,15 @@ export default function LandingPageView() {
       <section className="py-24 px-6 max-w-[1400px] mx-auto">
         <div className="mb-16">
           <h2 className="text-3xl font-bold tracking-tight mb-4">
-            L'Arsenal Complet.
+            L&apos;Arsenal Complet.
           </h2>
           <p className="text-zinc-500 max-w-lg">
-            Une suite d'outils conçue pour la performance, pas pour la
+            Une suite d&apos;outils conçue pour la performance, pas pour la
             décoration.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-6 h-auto md:h-[600px]">
-          {/* Card 1: Editor */}
           <div className="md:col-span-2 md:row-span-2 bg-white rounded-3xl p-8 border border-zinc-200 shadow-sm relative overflow-hidden group hover:border-zinc-400 transition-colors">
             <div className="relative z-10">
               <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center mb-6">
@@ -196,7 +210,6 @@ export default function LandingPageView() {
             </div>
           </div>
 
-          {/* Card 2: Mobile */}
           <div className="bg-zinc-900 text-white rounded-3xl p-8 border border-zinc-800 shadow-sm relative overflow-hidden group">
             <Smartphone className="w-8 h-8 mb-4 text-zinc-400" />
             <h3 className="text-xl font-bold mb-2">Mobile First</h3>
@@ -205,18 +218,17 @@ export default function LandingPageView() {
             </p>
           </div>
 
-          {/* Card 3: PDF */}
           <div className="bg-white rounded-3xl p-8 border border-zinc-200 shadow-sm relative overflow-hidden group hover:border-zinc-400 transition-colors">
             <FileText className="w-8 h-8 mb-4 text-zinc-900" />
             <h3 className="text-xl font-bold mb-2">Moteur PDF/A</h3>
             <p className="text-zinc-500 text-sm">
-              Standard d'archivage longue durée. Impression haute fidélité.
+              Standard d&apos;archivage longue durée. Impression haute fidélité.
             </p>
           </div>
         </div>
       </section>
 
-      {/* 4. TECHNICAL TRUST STRIP (Remplacement des Fake Stats) */}
+      {/* 4. TECHNICAL TRUST STRIP */}
       <section className="border-y border-zinc-200 bg-white">
         <div className="max-w-[1400px] mx-auto px-6 py-16 grid grid-cols-1 md:grid-cols-4 gap-12">
           {[
@@ -254,7 +266,10 @@ export default function LandingPageView() {
       </section>
 
       {/* 5. PRICING */}
-      <section className="py-24 px-6 max-w-5xl mx-auto text-center">
+      <section
+        id="pricing"
+        className="py-24 px-6 max-w-5xl mx-auto text-center"
+      >
         <h2 className="text-4xl md:text-5xl font-black tracking-tighter mb-6">
           Simple. Transparent.
         </h2>
@@ -279,10 +294,10 @@ export default function LandingPageView() {
               </li>
             </ul>
             <Link
-              href="/sign-up"
+              href={mainActionLink}
               className="block w-full py-3 rounded-xl border border-zinc-200 font-bold text-center hover:bg-zinc-50 text-zinc-900"
             >
-              Créer un compte
+              {userId ? "Aller au Dashboard" : "Créer un compte"}
             </Link>
           </div>
 
@@ -318,16 +333,17 @@ export default function LandingPageView() {
               </li>
             </ul>
             <Link
-              href="/sign-up"
-              className="block w-full py-4 rounded-xl bg-white text-black font-bold text-center hover:bg-zinc-200 transition-colors"
+              href={billingUrl} // ICI: On dirige vers /billing si connecté
+              className="w-full py-4 rounded-xl bg-white text-black font-bold text-center hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2"
             >
-              Passer Pro
+              {userId ? "Gérer l'abonnement" : "Passer Pro"}
+              {userId && <CreditCard className="w-4 h-4" />}
             </Link>
           </div>
         </div>
       </section>
 
-      {/* 6. BIG CTA FOOTER */}
+      {/* 6. CTA FOOTER */}
       <footer className="bg-black text-white pt-24 pb-12 px-6">
         <div className="max-w-[1400px] mx-auto text-center mb-24">
           <h2 className="text-5xl md:text-7xl font-black tracking-tighter mb-8 leading-none">
@@ -335,10 +351,11 @@ export default function LandingPageView() {
             <span className="text-zinc-600">STRUCTURER VOTRE BUSINESS ?</span>
           </h2>
           <Link
-            href="/sign-up"
+            href={mainActionLink}
             className="inline-flex items-center gap-2 bg-white text-black px-10 py-5 rounded-full text-xl font-bold hover:scale-105 transition-transform"
           >
-            Lancer l'App <ArrowRight className="w-6 h-6" />
+            {userId ? "Accéder à mon espace" : "Lancer l'App"}{" "}
+            <ArrowRight className="w-6 h-6" />
           </Link>
         </div>
 
