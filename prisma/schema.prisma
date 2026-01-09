@@ -1,9 +1,7 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 
 generator client {
   provider = "prisma-client"
-  // NOTE : Si tu as des soucis d'import sur Vercel, enlève la ligne output pour laisser par défaut
   output   = "../app/generated/prisma"
 }
 
@@ -11,186 +9,163 @@ datasource db {
   provider = "postgresql"
 }
 
-// ==========================================
-// 1. GESTION DES LIMITES & ABONNEMENTS (NOUVEAU)
-// ==========================================
 
+enum PlanStatus {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  PAID
+}
+
+enum Profession {
+  TECH
+  CREATIVE
+  MARKETING
+  CONTENT
+  CONSULTING
+}
+
+enum BusinessModel {
+  PROJECT
+  TIME
+  RECURRING
+  UNIT
+}
+
+model User {
+  id              String    @id 
+  email           String    @unique
+  plan            PlanStatus @default(FREE)
+  profession      Profession?
+  businessModel   BusinessModel?
+  isOnboarded     Boolean   @default(false)
+  companyName     String?
+  companyEmail    String?
+  companyPhone    String?
+  companyAddress  String?
+  companySiret    String?
+  companyWebsite  String?
+  quotePrefix     String    @default("INV-")
+  nextQuoteNumber Int       @default(1)
+  currency        String    @default("EUR")
+  defaultVatRate  Float     @default(20.0)
+  defaultTerms    String?
+  clients         Client[]
+  quotes          Quote[]
+  userServices    UserService[]
+  catalogOffers   CatalogOffer[] 
+  subscription    Subscription?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  @@map("users")
+}
 model UserApiLimit {
   id        String   @id @default(cuid())
   userId    String   @unique
   count     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
-  // Relation optionnelle si tu veux la cascade delete
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model UserSubscription {
-  id                     String    @id @default(cuid())
-  userId                 String    @unique
-  stripeCustomerId       String?   @unique @map(name: "stripe_customer_id")
-  stripeSubscriptionId   String?   @unique @map(name: "stripe_subscription_id")
-  stripePriceId          String?   @map(name: "stripe_price_id")
-  stripeCurrentPeriodEnd DateTime? @map(name: "stripe_current_period_end")
-  
-  // Relation optionnelle
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Subscription {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  variantId        String?   
+  customerId       String?   @unique
+  subscriptionId   String?   @unique
+  endsAt           DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }
 
-// ==========================================
-// 2. DESIGN SYSTEM & ONTOLOGIE
-// ==========================================
-
-model Theme {
-  id          String   @id @default(cuid())
-  name        String   // Ex: "Swiss International", "Tech Unicorn"
-  description String?  // Ex: "Minimaliste & Helvetica"
-  color       String   // Code Hex pour la pastille UI (ex: #000000)
-  
-  // LE LIEN AVEC LE CODE
-  baseLayout  String   // "swiss", "tech", "corporate"
-  
-  // CONFIGURATION VISUELLE
-  config      Json     
-  
-  isSystem    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([isSystem])
-}
-
-model ServiceTemplate {
-  id          String   @id @default(cuid())
-  category    String   
-  subcategory String   
-  title       String   
-  
-  salesCopy      Json   
-  technicalScope Json   
-  pricing        Json   
-  marketContext  Json   
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model CatalogOffer {
+  id              String    @id @default(cuid())
+  category        String    
+  title           String    
+  subtitle        String    @default("")
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unitPriceEuros  Float
+  isPremium       Boolean   @default(false)
+  createdAt       DateTime  @default(now())
 
   @@index([category])
-  @@index([subcategory])
 }
 
-// ==========================================
-// 3. UTILISATEURS & OFFRES
-// ==========================================
-
-model User {
-  id        String    @id @default(cuid()) 
-  email     String    @unique 
-  
-  // Identité Entreprise
-  companyName    String?
-  companyEmail   String?
-  companyPhone   String?
-  companyAddress String?
-  companySiret   String?   
-  companyWebsite String?   
-
-  // Paramètres de Facturation
-  quotePrefix    String    @default("DEV-")
-  nextQuoteNumber Int      @default(1)
-  defaultVatRate Float     @default(20.0)
-  defaultTerms   String?   
-
-  // Relations Métier
-  Clients      Client[]
-  Devis        Devis[]
-  ServiceItems ServiceItem[]
-
-  // Relations Système (NOUVEAU)
-  apiLimit     UserApiLimit?
-  subscription UserSubscription?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  @@map("users")
-}
-
-model ServiceItem {
+model UserService {
   id              String    @id @default(cuid())
-  userId          String    
+  userId          String
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  title           String    
-  description     String?   
-  category        String?   
-  
-  unitPriceEuros  Float     
-  defaultQuantity Float     @default(1) 
-  isTaxable       Boolean   @default(true) 
-
-  salesCopy       Json?     
-  technicalScope  Json?     
-  pricing         Json?     
-  marketContext   Json?     
-
+  title           String
+  subtitle        String    @default("")
+  unitPriceEuros  Float
   createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  @@index([userId])
-  @@unique([userId, title]) 
-  @@map("service_items")
+  @@unique([userId, title])
 }
 
-// ==========================================
-// 4. CRM & FACTURATION
-// ==========================================
 
 model Client {
-  id        String    @id @default(cuid())
-  userId    String    
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade) 
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  email           String?
+  address         String?
+  siret           String?
+  quotes          Quote[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  name      String
-  email     String?
-  phone     String?   
-  address   String?
-  siret     String?   
-  notes     String?   
-
-  Devis     Devis[]   
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  
-  @@unique([userId, name]) 
-  @@map("clients")
+  @@unique([userId, name])
 }
 
-model Devis {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  
-  clientId    String    
-  client      Client    @relation(fields: [clientId], references: [id])
-  
-  number      String    @unique
-  issueDate   DateTime  
-  
-  status      String    @default("draft") 
-  validityDate DateTime?
+model Quote {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  clientId        String
+  client          Client    @relation(fields: [clientId], references: [id])
+  number          String    @unique
+  status          QuoteStatus @default(DRAFT)
+  issueDate       DateTime  @default(now())
+  vatRatePercent  Float     @default(20)
+  discountEuros   Float     @default(0)
+  lines           QuoteLine[]
+  terms           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  totalTTC    Float     
+  @@map("quotes")
+}
 
-  vatRatePercent      Float @default(20) 
-  discountAmountEuros Float @default(0)  
-
-  itemsData   Json      
-  terms       String?   
-  
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
-  @@map("devis")
+model QuoteLine {
+  id              String    @id @default(cuid())
+  quoteId         String
+  quote           Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  title           String
+  subtitle        String    @default("")
+  quantity        Float     @default(1)
+  unitPriceEuros  Float
+  @@map("quote_lines")
+}
+model Theme {
+  id          String   @id @default(cuid())
+  name        String   
+  description String?  
+  color       String   
+  baseLayout  String   
+  config      Json   
+  isSystem    Boolean  @default(false)
+  isPremium   Boolean  @default(true) 
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([isSystem])
 }

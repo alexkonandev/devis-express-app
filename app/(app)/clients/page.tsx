@@ -1,16 +1,26 @@
 import { Metadata } from "next";
+import { redirect } from "next/navigation";
 import ClientsView from "@/components/clients/clients-view";
+import { getClients } from "@/actions/client-action";
+import { getClerkUserId } from "@/lib/auth";
 
-// Optimisation SEO / Titre de l'onglet
 export const metadata: Metadata = {
   title: "Gestion Clients | DevisExpress",
   description: "Gérez votre carnet d'adresses clients et entreprises.",
 };
 
 export default async function ClientsPage() {
-  // Ici, page.tsx est un Server Component.
-  // Il ne contient AUCUNE logique d'état (useState, useEffect).
-  // Il se contente de rendre la Vue Client.
+  const userId = await getClerkUserId();
+  if (!userId) redirect("/sign-in");
 
-  return <ClientsView />;
+  // Fetch initial des clients (Server-side)
+  const initialClients = await getClients();
+
+  return (
+    <main className="min-h-screen bg-zinc-50/50">
+      <div className="p-6 md:p-10 max-w-[1600px] mx-auto w-full">
+        <ClientsView initialData={initialClients} />
+      </div>
+    </main>
+  );
 }

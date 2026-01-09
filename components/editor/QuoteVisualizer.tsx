@@ -1,40 +1,53 @@
 "use client";
 
 import React from "react";
-// On importe le composant PDF et son type pour le typage des props
-import PrintableQuote, {
-  ThemeConfigProp,
-} from "@/components/pdf/PrintableQuote";
+import PrintableQuote from "@/components/pdf/printable-quote";
+
+// --- TYPES STRICTS (Zéro Any - Alignement DB/Interface) ---
+import { EditorActiveQuote, EditorTheme } from "@/types/editor";
 
 interface QuoteVisualizerProps {
-  data: any; // ActiveQuote
-  theme: ThemeConfigProp; // On reçoit l'objet complet ici aussi
-  printRef: React.RefObject<HTMLDivElement>;
-  zoom: number;
+  data: EditorActiveQuote;
+  theme: EditorTheme;
+  printRef: React.RefObject<HTMLDivElement | null>;
 }
 
+/**
+ * Composant de prévisualisation du devis.
+ * Gère l'affichage dynamique dans le studio et le fallback en cas de DB vide.
+ */
 export const QuoteVisualizer = ({
   data,
   theme,
   printRef,
-  zoom,
 }: QuoteVisualizerProps) => {
-  if (!data) return null;
+  // Sécurité : Si les données du devis ne sont pas encore chargées
+  if (!data) {
+    return (
+      <div className="p-20 text-zinc-400 font-black uppercase tracking-widest text-center border-2 border-dashed border-zinc-100 rounded-xl">
+        Initialisation des données...
+      </div>
+    );
+  }
 
   return (
-    <div
-      className="flex justify-center items-start pt-12 pb-32 min-h-full cursor-default select-none print:p-0 print:m-0"
-      style={{
-        transform: `scale(${zoom})`,
-        transformOrigin: "top center",
-        transition: "transform 0.1s linear",
-      }}
-    >
-      {/* STRATÉGIE : On utilise PrintableQuote ici.
-        Pourquoi ? Pour que le rendu visuel dans l'éditeur (couleurs, polices, layout)
-        soit strictement identique au rendu PDF final.
-      */}
-      <PrintableQuote ref={printRef} quote={data} theme={theme} />
+    <div className="flex justify-center items-start cursor-default select-none print:p-0 print:m-0 animate-in fade-in duration-500">
+      <PrintableQuote
+        ref={printRef}
+        quote={data}
+        // ✅ GESTION DU ZERO-DATA STATE :
+        // Si aucune donnée n'est en DB (theme undefined), on injecte un fallback
+        // pour que le devis s'affiche immédiatement sans erreur TS.
+        theme={
+          theme || {
+            id: "default-fallback",
+            name: "Design Standard",
+            baseLayout: "swiss",
+            color: "#18181b",
+            config: {},
+          }
+        }
+      />
     </div>
   );
 };

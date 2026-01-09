@@ -1,118 +1,74 @@
 "use client";
 
-import React, { useState, useRef, useMemo } from "react";
-import { Theme } from "@prisma/client";
-import { toast } from "sonner"; // Pour les notifications
-import { useRouter } from "next/navigation"; // Pour rediriger si besoin
+import React, { useState, useRef, useMemo, useEffect } from "react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 
-import { Client as ClientType } from "@/hooks/useClientManager";
+// --- UI COMPONENTS ---
 import { QuoteEditorLayout } from "@/components/editor/quote-editor-layout";
 import { StudioSidebarLeft } from "@/components/editor/studio-sidebar-left";
 import { StudioSidebarRight } from "@/components/editor/studio-sidebar-right";
 import { FloatingToolbar } from "@/components/editor/floating-toolbar";
 import { QuoteVisualizer } from "@/components/editor/QuoteVisualizer";
-import PrintableQuote from "@/components/pdf/PrintableQuote";
-import { cn } from "@/lib/utils";
 
-// IMPORT DE L'ACTION BACKEND
-import { upsertQuoteAction } from "@/app/actions/quote.actions";
+// --- TYPES CENTRALISÉS ---
+import {
+  EditorActiveQuote,
+  EditorUserSettings,
+  EditorTheme,
+  EditorCatalogOffer,
+  EditorClient,
+  EditorQuoteItem,
+  EditorQuoteStatus,
+} from "@/types/editor";
 
-// --- INTERFACES ---
-interface QuoteItem {
-  title: string;
-  subtitle: string;
-  quantity: number;
-  unitPriceEuros: number;
-}
-
-interface ActiveQuote {
-  title: string;
-  company: {
-    name: string;
-    email: string;
-    phone: string;
-    address?: string;
-    siret?: string;
-    website?: string;
-  };
-  client: {
-    name: string;
-    email: string;
-    phone: string;
-    address: string;
-    siret: string;
-  };
-  quote: { number: string; issueDate: string | Date; terms: string };
-  financials: { vatRatePercent: number; discountAmountEuros: number };
-  items: QuoteItem[];
-}
-
-interface ServiceItem {
-  id: string;
-  title: string;
-  description?: string;
-  salesCopy?: { description: string };
-  unitPriceEuros?: number;
-  defaultPrice?: number;
-  category?: string;
-}
-
-interface UserSettings {
-  companyName: string;
-  companyEmail: string;
-  companyPhone: string;
-  companyAddress: string;
-  companySiret: string;
-  companyWebsite: string;
-  quotePrefix: string;
-  nextQuoteNumber: number;
-  defaultVatRate: number;
-  defaultTerms: string;
-}
+// --- ACTIONS ---
+import { upsertQuoteAction } from "@/actions/quote-action";
 
 interface CreateQuoteClientProps {
-  initialCatalog: ServiceItem[];
-  initialTemplates: ServiceItem[];
-  initialThemes: Theme[];
-  initialClients: ClientType[];
-  userSettings: UserSettings;
-  // Optionnel: si on édite un devis existant
+  initialCatalog: EditorCatalogOffer[];
+  initialThemes: EditorTheme[];
+  initialClients: EditorClient[];
+  userSettings: EditorUserSettings;
+  preSelectedTheme?: EditorTheme | null;
+  preSelectedOffer?: EditorCatalogOffer | null;
   existingQuoteId?: string;
-  initialQuoteData?: ActiveQuote;
+  initialQuoteData?: EditorActiveQuote;
 }
 
 export default function CreateQuoteClient({
   initialCatalog,
-  initialTemplates,
   initialThemes,
   initialClients,
   userSettings,
-  existingQuoteId, // À venir pour le mode édition
+  preSelectedTheme,
+  preSelectedOffer,
+  existingQuoteId,
   initialQuoteData,
 }: CreateQuoteClientProps) {
   const router = useRouter();
 
-  // --- STATE ---
-
-  // Si on a des données initiales (mode edit), on les utilise, sinon valeurs par défaut
-  const [activeQuote, setActiveQuote] = useState<ActiveQuote>(
+  // --- STATE ALIGNÉ (Phone supprimé pour matcher EditorActiveQuote) ---
+  const [activeQuote, setActiveQuote] = useState<EditorActiveQuote>(
     initialQuoteData || {
       title: "Nouveau Devis",
       company: {
         name: userSettings.companyName,
         email: userSettings.companyEmail,
-        phone: userSettings.companyPhone,
         address: userSettings.companyAddress,
         siret: userSettings.companySiret,
         website: userSettings.companyWebsite,
       },
-      client: { name: "", email: "", phone: "", address: "", siret: "" },
+      // ✅ Client aligné : name, email, address, siret uniquement
+      client: { name: "", email: "", address: "", siret: "" },
       quote: {
         number: `${userSettings.quotePrefix}${String(
           userSettings.nextQuoteNumber
         ).padStart(3, "0")}`,
         issueDate: new Date().toISOString().split("T")[0],
         terms: userSettings.defaultTerms,
+        status: "DRAFT" as EditorQuoteStatus,
       },
       financials: {
         vatRatePercent: userSettings.defaultVatRate,
@@ -122,53 +78,80 @@ export default function CreateQuoteClient({
     }
   );
 
-  // ID du devis en base de données (null si nouveau, string si sauvegardé)
   const [dbQuoteId, setDbQuoteId] = useState<string | null>(
     existingQuoteId || null
   );
-
   const [activeThemeId, setActiveThemeId] = useState<string>(
-    initialThemes.length > 0 ? initialThemes[0].id : ""
+    preSelectedTheme?.id ||
+      (initialThemes.length > 0 ? initialThemes[0].id : "")
   );
-
   const [viewMode, setViewMode] = useState<"studio" | "preview">("studio");
-  const [zoom, setZoom] = useState<number>(0.8);
+  const [zoom, setZoom] = useState<number>(0.85);
   const [isSaving, setIsSaving] = useState<boolean>(false);
-
   const printRef = useRef<HTMLDivElement>(null);
 
-  // --- MEMOS ---
+  // --- AUTO-INJECTION D'OFFRE ---
+  useEffect(() => {
+    if (preSelectedOffer && activeQuote.items.length === 0) {
+      const newItem: EditorQuoteItem = {
+        title: preSelectedOffer.title,
+        subtitle: preSelectedOffer.subtitle || "",
+        quantity: 1,
+        unitPriceEuros: preSelectedOffer.unitPriceEuros,
+      };
+
+      setActiveQuote((prev) => ({
+        ...prev,
+        items: [newItem],
+      }));
+    }
+  }, [preSelectedOffer, activeQuote.items.length]);
+
+  // --- THEME LOGIC ---
   const activeThemeObject = useMemo(() => {
     return (
       initialThemes.find((t) => t.id === activeThemeId) || initialThemes[0]
     );
   }, [activeThemeId, initialThemes]);
 
-  const formattedThemesForSidebar = useMemo(
-    () =>
-      initialThemes.map((t) => ({
-        id: t.id,
-        name: t.name,
-        color: t.color,
-        description: t.description || undefined,
-      })),
-    [initialThemes]
-  );
+  // --- CALCULS FINANCIERS ---
+  const totals = useMemo(() => {
+    const subTotal = activeQuote.items.reduce(
+      (acc, item) =>
+        acc + (Number(item.quantity) * Number(item.unitPriceEuros) || 0),
+      0
+    );
+    const discount = Number(activeQuote.financials.discountAmountEuros) || 0;
+    const taxable = Math.max(0, subTotal - discount);
+    const vat = taxable * (activeQuote.financials.vatRatePercent / 100);
 
-  // --- HANDLERS D'ÉTAT ---
+    return { subTotal, totalTTC: taxable + vat };
+  }, [activeQuote.items, activeQuote.financials]);
+
+  // --- HANDLERS ---
   const handleUpdateField = (
-    group: keyof ActiveQuote | null,
+    group: keyof EditorActiveQuote | null,
     field: string,
     value: string | number
   ) => {
     setActiveQuote((prev) => {
       if (group === null) return { ...prev, [field]: value };
-      // @ts-ignore
-      return { ...prev, [group]: { ...prev[group], [field]: value } };
+      const groupData = prev[group];
+      if (
+        typeof groupData === "object" &&
+        groupData !== null &&
+        !Array.isArray(groupData)
+      ) {
+        return {
+          ...prev,
+          [group]: { ...groupData, [field]: value },
+        };
+      }
+      return prev;
     });
   };
 
-  const handleAddItem = (item: Partial<QuoteItem> = {}) => {
+  const handleAddItem = (item: Partial<EditorQuoteItem> = {}) => {
     setActiveQuote((prev) => ({
       ...prev,
       items: [
@@ -185,12 +168,15 @@ export default function CreateQuoteClient({
 
   const handleUpdateItem = (
     index: number,
-    field: keyof QuoteItem,
+    field: keyof EditorQuoteItem,
     value: string | number
   ) => {
     setActiveQuote((prev) => {
       const newItems = [...prev.items];
-      newItems[index] = { ...newItems[index], [field]: value };
+      newItems[index] = {
+        ...newItems[index],
+        [field]: value,
+      } as EditorQuoteItem;
       return { ...prev, items: newItems };
     });
   };
@@ -211,7 +197,6 @@ export default function CreateQuoteClient({
     });
   };
 
-  // --- HANDLER SAUVEGARDE (DATABASE) ---
   const handleSaveQuote = async () => {
     if (!activeQuote.client.name) {
       toast.error("Veuillez renseigner un nom de client.");
@@ -219,138 +204,18 @@ export default function CreateQuoteClient({
     }
 
     setIsSaving(true);
-
-    // Appel à la Server Action
-    const result = await upsertQuoteAction(activeQuote, dbQuoteId);
-
-    if (result.success && result.data) {
-      setDbQuoteId(result.data.id); // On enregistre l'ID pour les prochaines sauvegardes
-      toast.success("Devis enregistré avec succès !");
-
-      // Optionnel : Changer l'URL pour refléter l'ID sans recharger la page
-      // window.history.replaceState(null, "", `/devis/${result.data.id}`);
-    } else {
-      toast.error(result.error || "Erreur lors de la sauvegarde.");
-    }
-
-    setIsSaving(false);
-  };
-
-  // --- HANDLER PDF ---
-  const handleGeneratePDF = async () => {
-    // 1. On sauvegarde d'abord pour être sûr d'avoir la dernière version en base
-    if (!dbQuoteId) {
-      await handleSaveQuote();
-    } else {
-      // Sauvegarde silencieuse (sans bloquer si déjà existant, mais bonne pratique)
-      upsertQuoteAction(activeQuote, dbQuoteId);
-    }
-
-    setIsSaving(true);
     try {
-      const element = document.getElementById("printable-content");
-      if (!element) return;
-
-      const config = activeThemeObject.config as any;
-      const primary = config?.colors?.primary || "#000000";
-      const secondary = config?.colors?.secondary || "#666666";
-      const text = config?.colors?.text || "#000000";
-      const bg = config?.colors?.bg || "#ffffff";
-      const border = config?.colors?.border || "#e5e7eb";
-      const fontFamily = config?.typography?.fontFamily || "Inter, sans-serif";
-      const headingWeight = config?.typography?.headingWeight || "700";
-
-      const styles = Array.from(document.querySelectorAll("style"))
-        .map((style) => style.innerHTML)
-        .join("\n");
-
-      const fullHTML = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <link rel="preconnect" href="https://fonts.googleapis.com">
-            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
-            <script src="https://cdn.tailwindcss.com"></script>
-            <script>
-              tailwind.config = {
-                theme: {
-                  extend: {
-                    colors: {
-                      border: "var(--border)",
-                      input: "var(--input)",
-                      ring: "var(--ring)",
-                      background: "var(--bg)",
-                      foreground: "var(--text)",
-                    },
-                    fontFamily: {
-                      sans: ['var(--font-family)', 'ui-sans-serif', 'system-ui'],
-                      heading: ['var(--font-family)', 'ui-sans-serif'],
-                    }
-                  }
-                }
-              }
-            </script>
-            <style>
-              ${styles}
-              :root {
-                --primary: ${primary} !important;
-                --secondary: ${secondary} !important;
-                --text: ${text} !important;
-                --bg: ${bg} !important;
-                --border: ${border} !important;
-                --font-family: ${fontFamily} !important;
-                --heading-weight: ${headingWeight} !important;
-              }
-              body {
-                margin: 0; padding: 0; background: white;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                font-family: var(--font-family); color: var(--text);
-              }
-              h1, h2, h3, .text-4xl, .text-5xl, .text-6xl, .font-bold {
-                font-family: var(--font-family) !important;
-                font-weight: var(--heading-weight, 700) !important;
-              }
-              .theme-scope-${activeThemeObject.id} h1 {
-                 font-weight: 800 !important;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="theme-scope-${activeThemeObject.id}" style="width: 210mm; min-height: 297mm;">
-              ${element.innerHTML}
-            </div>
-          </body>
-        </html>
-      `;
-
-      const response = await fetch("/api/pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          html: fullHTML,
-          fileName: `Devis_${
-            activeQuote.quote.number
-          }_${activeQuote.client.name.replace(/\s+/g, "_")}`,
-        }),
-      });
-
-      if (!response.ok) throw new Error("Génération PDF échouée");
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `Devis_${activeQuote.quote.number}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode?.removeChild(link);
-    } catch (error) {
-      console.error("PDF_DL_ERROR:", error);
-      toast.error("Erreur lors de la génération PDF");
+      // ✅ Désormais, les types match parfaitement (phone absent des deux côtés)
+      const result = await upsertQuoteAction(activeQuote, dbQuoteId);
+      if (result.success && result.data) {
+        setDbQuoteId(result.data.id);
+        toast.success("Devis enregistré !");
+        router.refresh();
+      } else {
+        toast.error(result.error || "Une erreur est survenue.");
+      }
+    } catch {
+      toast.error("Échec de la connexion au serveur.");
     } finally {
       setIsSaving(false);
     }
@@ -359,40 +224,40 @@ export default function CreateQuoteClient({
   return (
     <QuoteEditorLayout
       leftSidebar={
-        viewMode === "studio" ? (
+        viewMode === "studio" && (
           <StudioSidebarLeft
             activeQuote={activeQuote}
             updateField={handleUpdateField}
             initialClients={initialClients}
           />
-        ) : undefined
+        )
       }
       rightSidebar={
-        viewMode === "studio" ? (
+        viewMode === "studio" && (
           <StudioSidebarRight
             activeQuote={activeQuote}
-            availableThemes={formattedThemesForSidebar}
+            availableThemes={initialThemes}
             currentTheme={activeThemeId}
             setTheme={setActiveThemeId}
             catalogItems={initialCatalog}
-            systemTemplates={initialTemplates}
             addItem={handleAddItem}
             updateItem={handleUpdateItem}
             removeItem={handleRemoveItem}
             moveItem={handleMoveItem}
+            totals={totals}
           />
-        ) : undefined
+        )
       }
       bottomToolbar={
         <FloatingToolbar
           zoom={zoom}
           setZoom={setZoom}
-          onPrint={handleGeneratePDF}
-          onSave={handleSaveQuote} // <-- CONNEXION ICI
+          onPrint={() => window.print()}
+          onSave={handleSaveQuote}
           isSaving={isSaving}
           viewMode={viewMode}
           setViewMode={setViewMode}
-          themes={formattedThemesForSidebar}
+          themes={initialThemes}
           activeThemeId={activeThemeId}
           onThemeChange={setActiveThemeId}
         />
@@ -400,28 +265,19 @@ export default function CreateQuoteClient({
     >
       <div
         className={cn(
-          "flex justify-center items-start pt-12 pb-32 min-h-full transition-all duration-300 origin-top will-change-transform",
-          viewMode === "preview" ? "bg-zinc-900/40" : "bg-transparent"
+          "flex justify-center items-start pt-12 pb-32 min-h-full transition-all duration-300 origin-top",
+          viewMode === "preview" ? "bg-zinc-900/40 scale-100" : ""
         )}
-        style={{ transform: `scale(${zoom})` }}
+        style={{
+          transform: viewMode === "studio" ? `scale(${zoom})` : undefined,
+        }}
       >
         <div id="printable-content" className="shadow-2xl shadow-black/10">
-          {viewMode === "studio" ? (
-            <QuoteVisualizer
-              data={activeQuote}
-              theme={activeThemeObject}
-              printRef={printRef as React.RefObject<HTMLDivElement>}
-              zoom={1}
-            />
-          ) : (
-            <div className="flex justify-center">
-              <PrintableQuote
-                ref={printRef as React.RefObject<HTMLDivElement>}
-                quote={activeQuote as any}
-                theme={activeThemeObject}
-              />
-            </div>
-          )}
+          <QuoteVisualizer
+            data={activeQuote}
+            theme={activeThemeObject}
+            printRef={printRef as React.RefObject<HTMLDivElement>}
+          />
         </div>
       </div>
     </QuoteEditorLayout>
