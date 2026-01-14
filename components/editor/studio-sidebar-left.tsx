@@ -132,7 +132,7 @@ const PanelTextarea = (
     {...props}
     value={props.value || ""}
     className={cn(
-      "w-full bg-zinc-100 text-zinc-900 border border-transparent rounded-sm px-2.5 py-2 text-xs font-medium outline-none transition-all resize-none min-h-[60px] hover:bg-zinc-200/70 focus:bg-white focus:border-zinc-900",
+      "w-full bg-zinc-100 text-zinc-900 border border-transparent rounded-sm px-2.5 py-2 text-xs font-medium outline-none transition-all resize-none min-h-15 hover:bg-zinc-200/70 focus:bg-white focus:border-zinc-900",
       props.className
     )}
   />
@@ -190,7 +190,7 @@ const ClientAutocomplete = ({
         placeholder="RECHERCHER OU CRÉER..."
       />
       {isOpen && (
-        <div className="absolute top-full left-0 w-full mt-1 bg-white border border-zinc-200 rounded-sm shadow-xl z-50 max-h-[220px] overflow-y-auto">
+        <div className="absolute top-full left-0 w-full mt-1 bg-white border border-zinc-200 rounded-sm shadow-xl z-50 max-h-55 overflow-y-auto">
           {filtered.map((client) => (
             <button
               key={client.id}
@@ -276,7 +276,7 @@ export const StudioSidebarLeft = ({
         }
       />
 
-      <div className="flex flex-col h-full bg-white border-r border-zinc-200 w-[300px] select-none shadow-sm z-10">
+      <div className="flex flex-col h-full bg-white border-r border-zinc-200 w-75 select-none shadow-sm z-10">
         <div className="h-14 shrink-0 flex items-center px-3 border-b border-zinc-200 gap-3 bg-white">
           <button
             onClick={onBack}

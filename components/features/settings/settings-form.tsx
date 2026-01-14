@@ -23,7 +23,6 @@ interface SettingsFormProps {
 
 export function SettingsForm({ initialData, isPro }: SettingsFormProps) {
   const form = useForm<SettingsFormValues>({
-    // @ts-expect-error - Résout le décalage de typage entre Zod et RHF
     resolver: zodResolver(settingsSchema),
     defaultValues: initialData,
   });
@@ -177,7 +176,7 @@ export function SettingsForm({ initialData, isPro }: SettingsFormProps) {
             </label>
             <Textarea
               {...form.register("defaultTerms")}
-              className="h-[180px] font-mono text-[10px] leading-relaxed resize-none focus-visible:ring-zinc-900 p-4 border-zinc-200"
+              className="h-45font-mono text-[10px] leading-relaxed resize-none focus-visible:ring-zinc-900 p-4 border-zinc-200"
               placeholder="Ex: Paiement à réception. Validité 30 jours. Intérêts de retard..."
             />
           </div>

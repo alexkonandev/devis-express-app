@@ -41,7 +41,7 @@ export function AppSidebar() {
   };
 
   return (
-    <aside className="h-full w-[60px] bg-white flex flex-col items-center py-4 gap-6 shrink-0 border-r border-zinc-200">
+    <aside className="h-full w-15 bg-white flex flex-col items-center py-4 gap-6 shrink-0 border-r border-zinc-200">
       <nav className="flex flex-col gap-2 w-full px-2">
         {MAIN_NAV.map((item) => (
           <NavIcon

@@ -93,7 +93,7 @@ export const FloatingToolbar = ({
               Identité Visuelle
             </span>
           </div>
-          <div className="flex flex-col gap-0.5 max-h-[200px] overflow-y-auto">
+          <div className="flex flex-col gap-0.5 max-h-50 overflow-y-auto">
             {themes.map((theme) => {
               const isActive = activeThemeId === theme.id;
               return (

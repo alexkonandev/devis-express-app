@@ -129,7 +129,7 @@ const quotes: QuoteListItem[] = initialData.items;
   };
 
   return (
-    <div className="p-6 md:p-10 max-w-[1600px] mx-auto w-full">
+    <div className="p-6 md:p-10 max-w-400 mx-auto w-full">
       <div className="flex flex-col gap-6 animate-in fade-in duration-500">
         {/* TOOLBAR STRATÉGIQUE */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-zinc-200 shadow-sm">
@@ -174,7 +174,7 @@ const quotes: QuoteListItem[] = initialData.items;
         </div>
 
         {/* TABLEAU HAUTE DENSITÉ */}
-        <div className="bg-white border border-zinc-200 rounded-xl shadow-sm overflow-hidden relative min-h-[400px]">
+        <div className="bg-white border border-zinc-200 rounded-xl shadow-sm overflow-hidden relative min-h-100">
           {isPending && (
             <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-20 flex items-center justify-center">
               <Loader2 className="w-6 h-6 animate-spin text-zinc-900" />

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Search, Bell, CloudCheck } from "lucide-react";
+import { Bell, CloudCheck } from "lucide-react";
 import { AppBreadcrumb } from "@/components/layout/app-breadcrumb";
 
 export function AppTopBar() {
@@ -26,17 +26,7 @@ export function AppTopBar() {
         <AppBreadcrumb />
       </div>
 
-      <div className="hidden md:flex items-center justify-center flex-1 max-w-sm mx-8">
-        <button className="w-full h-7 bg-zinc-50 border border-zinc-200 hover:border-zinc-300 rounded-md flex items-center px-3 gap-2 text-zinc-400 hover:bg-white transition-all group">
-          <Search className="w-3.5 h-3.5 group-hover:text-zinc-600" />
-          <span className="text-[9px] font-bold uppercase tracking-widest group-hover:text-zinc-500">
-            Recherche rapide
-          </span>
-          <kbd className="ml-auto text-[9px] font-mono bg-white px-1.5 py-0.5 rounded border border-zinc-200 text-zinc-400">
-            ⌘K
-          </kbd>
-        </button>
-      </div>
+     
 
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1.5 text-[9px] text-emerald-600 font-black tracking-widest">

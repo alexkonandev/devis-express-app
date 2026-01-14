@@ -1,9 +1,17 @@
 import Link from "next/link";
-import { TopClient } from "@/app/actions/dashboard.actions";
 import { ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function ClientRanking({ clients }: { clients: TopClient[] }) {
+interface ClientRankingProps {
+  clients: {
+    id: string;
+    name: string;
+    totalSpent: number;
+    quoteCount: number; 
+  }[];
+}
+
+export function ClientRanking({ clients }: ClientRankingProps) {
   return (
     <div className="bg-white border border-zinc-200 rounded-sm flex flex-col h-full">
       <div className="px-4 py-3 border-b border-zinc-100 shrink-0 bg-zinc-50/30 flex justify-between items-center">
@@ -41,12 +49,11 @@ export function ClientRanking({ clients }: { clients: TopClient[] }) {
                     {i + 1}
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-xs font-bold text-zinc-700 group-hover:text-zinc-900 truncate max-w-[120px]">
+                    <span className="text-xs font-bold text-zinc-700 group-hover:text-zinc-900 truncate max-w-30">
                       {client.name}
                     </span>
                     <span className="text-[9px] text-zinc-400">
-                      {client.projectsCount} projet
-                      {client.projectsCount > 1 ? "s" : ""}
+                      {client.quoteCount} devis
                     </span>
                   </div>
                 </div>

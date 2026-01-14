@@ -120,7 +120,7 @@ export default function ClientsView({ initialData }: ClientsViewProps) {
       </div>
 
       {/* DATA GRID HAUTE DENSITÉ */}
-      <div className="bg-white border border-zinc-200 rounded-xl shadow-sm overflow-hidden relative min-h-[400px]">
+      <div className="bg-white border border-zinc-200 rounded-xl shadow-sm overflow-hidden relative min-h-100">
         {isPending && (
           <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-20 flex items-center justify-center">
             <Loader2 className="w-6 h-6 animate-spin text-zinc-900" />

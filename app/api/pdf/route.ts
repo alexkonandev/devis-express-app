@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     });
 
     await new Promise((r) => setTimeout(r, 500));
-    // 3. Génération du PDF Haute Fidélité
+   
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
@@ -40,17 +40,26 @@ export async function POST(req: NextRequest) {
       margin: { top: "0px", right: "0px", bottom: "0px", left: "0px" },
     });
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${fileName}.pdf"`,
+        "Content-Disposition": `attachment; filename="${
+          fileName || "devis"
+        }.pdf"`,
         "Content-Length": pdfBuffer.length.toString(),
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    // On identifie l'erreur de manière sécurisée
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "Une erreur inconnue est survenue";
+
     console.error("PDF_GEN_ERROR:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   } finally {
     if (browser) await browser.close();
   }

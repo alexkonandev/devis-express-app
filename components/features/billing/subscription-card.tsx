@@ -1,15 +1,45 @@
-import { ShieldCheck, Zap, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-// Import de l'action pour générer le lien de checkout Lemon Squeezy
-// import { createCheckoutLink } from "@/actions/lemon-squeezy";
+"use client";
 
-export function SubscriptionCard({ isPro }: { isPro: boolean }) {
+import React, { useState } from "react";
+import { ShieldCheck, Zap, ArrowRight, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+
+interface SubscriptionCardProps {
+  isPro: boolean;
+}
+
+export function SubscriptionCard({ isPro }: SubscriptionCardProps) {
+  const [loading, setLoading] = useState<boolean>(false);
+
+  // Stratégie de prix : 9.99€ ~ 6.500 FCFA
+  const PRICE_XOF = "5.000";
+
+  const handleUpgrade = async (): Promise<void> => {
+    setLoading(true);
+    try {
+      toast.info("Initialisation du paiement sécurisé...");
+
+      // LOGIQUE BUSINESS : Ici tu appelleras ton provider (CinetPay, FedaPay, ou Stripe via conversion)
+      // const url = await createCheckoutAction();
+      // window.location.href = url;
+
+      // Simulation pour le test
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erreur de paiement";
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div
       className={`relative overflow-hidden rounded-2xl border-2 transition-all ${
         isPro
-          ? "border-emerald-500 bg-white"
-          : "border-zinc-900 bg-zinc-900 text-white"
+          ? "border-emerald-500 bg-white shadow-2xl shadow-emerald-100"
+          : "border-zinc-900 bg-zinc-900 text-white shadow-2xl shadow-black/20"
       }`}
     >
       <div className="p-8">
@@ -64,10 +94,17 @@ export function SubscriptionCard({ isPro }: { isPro: boolean }) {
           ))}
         </ul>
 
-        {/* Action Button */}
         {!isPro ? (
-          <Button className="w-full h-14 bg-white text-zinc-900 hover:bg-zinc-100 font-black uppercase tracking-widest text-sm shadow-xl transition-transform active:scale-95">
-            Passer à la vitesse supérieure — 19€/mois
+          <Button
+            onClick={handleUpgrade}
+            disabled={loading}
+            className="w-full h-14 bg-white text-zinc-900 hover:bg-zinc-100 font-black uppercase tracking-widest text-sm shadow-xl transition-all active:scale-95 disabled:opacity-70"
+          >
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              `Passer en Pro — ${PRICE_XOF} FCFA / mois`
+            )}
           </Button>
         ) : (
           <Button

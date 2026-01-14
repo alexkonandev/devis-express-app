@@ -93,7 +93,7 @@ export default function OnboardingPage() {
         />
       </div>
 
-      <div className="w-full max-w-[680px] flex-1 flex flex-col justify-center">
+      <div className="w-full max-w-170 flex-1 flex flex-col justify-center">
         {/* Progress Stepper */}
         <div className="text-center mb-10">
           <h1 className="text-3xl font-black tracking-tighter uppercase italic text-zinc-900">
@@ -113,7 +113,7 @@ export default function OnboardingPage() {
           </div>
         </div>
 
-        <div className="min-h-[420px]">
+        <div className="min-h-105">
           {step === 1 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 animate-in fade-in zoom-in-95 duration-500">
               {PROFESSIONS.map((p) => (

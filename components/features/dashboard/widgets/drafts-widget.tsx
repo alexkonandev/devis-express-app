@@ -2,10 +2,21 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { PenLine, ArrowRight } from "lucide-react";
-import { RecentActivity } from "@/app/actions/dashboard.actions";
+import { QuoteStatus } from "@/types/quote";
 
-export function DraftsWidget({ drafts }: { drafts: RecentActivity[] }) {
-  const pendingDrafts = drafts.filter((d) => d.type === "DRAFT").slice(0, 3);
+interface DraftsWidgetProps {
+  drafts: {
+    id: string;
+    amount: number;
+    status: QuoteStatus; 
+    clientName: string;
+    quoteNumber: string;
+    date: Date | string;
+  }[];
+}
+
+export function DraftsWidget({ drafts }: DraftsWidgetProps) {
+  const pendingDrafts = drafts.slice(0, 3);
 
   return (
     <div className="bg-white border border-zinc-200 rounded-sm flex flex-col h-full">
@@ -34,11 +45,11 @@ export function DraftsWidget({ drafts }: { drafts: RecentActivity[] }) {
               <Link key={draft.id} href={`/devis/${draft.id}`}>
                 <div className="group flex items-center justify-between p-2 hover:bg-zinc-50 rounded-sm border border-transparent hover:border-zinc-100 transition-all cursor-pointer">
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-xs font-bold text-zinc-700 group-hover:text-zinc-900">
+                    <span className="text-xs font-bold text-zinc-700 group-hover:text-zinc-900 truncate max-w-30">
                       {draft.clientName}
                     </span>
                     <span className="text-[9px] text-zinc-400 font-mono">
-                      Modifié le{" "}
+                      {draft.quoteNumber} •{" "}
                       {format(new Date(draft.date), "d MMM", { locale: fr })}
                     </span>
                   </div>

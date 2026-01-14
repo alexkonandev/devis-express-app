@@ -1,3 +1,5 @@
+// types/dashboard.ts
+
 export type QuoteStatus = "DRAFT" | "SENT" | "ACCEPTED" | "REJECTED" | "PAID";
 
 export type Profession =
@@ -8,16 +10,6 @@ export type Profession =
   | "CONSULTING";
 
 export type BusinessModel = "PROJECT" | "TIME" | "RECURRING" | "UNIT";
-export interface QuoteItem {
-  id: string;
-  number: string;
-  status: QuoteStatus; // Utilise l'Enum que tu as déjà défini au dessus
-  updatedAt: Date;
-  totalAmount: number;
-  client: {
-    name: string;
-  };
-}
 
 export interface DashboardActivity {
   id: string;
@@ -25,7 +17,7 @@ export interface DashboardActivity {
   status: QuoteStatus;
   clientName: string;
   quoteNumber: string;
-  date: Date;
+  date: Date | string; // Ajout de string car les dates venant du serveur peuvent être sérialisées
 }
 
 export interface TopClient {
@@ -38,8 +30,9 @@ export interface TopClient {
 export interface SuggestedService {
   id: string;
   title: string;
-  price: number;
-  category: string;
+  price: number; // MODIFICATION : Doit correspondre au 'price' de ton action
+  category: string; // Gardé car présent dans ton action
+  // billingModel est supprimé ici car ton action ne le renvoie pas
 }
 
 export interface AdvancedDashboardData {

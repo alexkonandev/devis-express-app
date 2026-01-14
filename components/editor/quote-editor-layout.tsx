@@ -55,12 +55,12 @@ export const QuoteEditorLayout = ({
         className={cn(
           "bg-white border-r border-zinc-200 flex flex-col z-20 overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
           showLeft
-            ? "w-[300px] opacity-100 translate-x-0"
+            ? "w-75 opacity-100 translate-x-0"
             : "w-0 opacity-0 -translate-x-10 border-none"
         )}
       >
         {/* Wrapper fixe pour éviter l'écrasement du contenu pendant l'anim */}
-        <div className="w-[300px] h-full flex flex-col">{leftSidebar}</div>
+        <div className="w-75 h-full flex flex-col">{leftSidebar}</div>
       </aside>
 
       {/* --- CENTRE : EXPANSION AUTOMATIQUE (flex-1) --- */}
@@ -92,11 +92,11 @@ export const QuoteEditorLayout = ({
         className={cn(
           "bg-white border-l border-zinc-200 flex flex-col z-20 overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
           showRight
-            ? "w-[330px] opacity-100 translate-x-0"
+            ? "w-82.5 opacity-100 translate-x-0"
             : "w-0 opacity-0 translate-x-10 border-none"
         )}
       >
-        <div className="w-[330px] h-full flex flex-col">{rightSidebar}</div>
+        <div className="w-82.5 h-full flex flex-col">{rightSidebar}</div>
       </aside>
     </div>
   );

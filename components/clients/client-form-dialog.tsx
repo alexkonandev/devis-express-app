@@ -77,7 +77,7 @@ export function ClientFormDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[450px] bg-white p-0 gap-0 overflow-hidden shadow-2xl border-zinc-100 rounded-sm">
+      <DialogContent className="sm:max-w-112.5 bg-white p-0 gap-0 overflow-hidden shadow-2xl border-zinc-100 rounded-sm">
         <DialogHeader className="px-6 py-5 bg-zinc-50/50 border-b border-zinc-100">
           <DialogTitle className="flex items-center gap-3 text-zinc-900 font-black uppercase tracking-widest text-[10px]">
             <div className="p-2 bg-white rounded-sm border border-zinc-200 shadow-sm">
