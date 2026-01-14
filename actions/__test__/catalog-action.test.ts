@@ -10,8 +10,6 @@ describe("Catalog Actions - Business Logic Validation", () => {
 
   describe("getCatalogOffers", () => {
     it("devrait appeler findMany pour récupérer le catalogue", async () => {
-      // Même si l'action ne filtre pas par userId (selon tes erreurs Prisma),
-      // on mock l'auth pour passer la garde de l'action.
       (getClerkUserId as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
         "user_123"
       );
@@ -26,12 +24,15 @@ describe("Catalog Actions - Business Logic Validation", () => {
 
   describe("upsertCatalogOffer", () => {
     // SOURCE DE VÉRITÉ : L'objet doit contenir 'category'
-    const mockOffer = {
-      title: "Consulting SEO",
-      unitPriceEuros: 500,
-      category: "Marketing", // Ajouté pour corriger TS(2345)
-      description: "Optimisation pour les moteurs de recherche",
-    };
+   const mockOffer = {
+     id: "new_id", // Toujours passer un ID pour le contrat d'upsert ou gérer l'optionnel
+     title: "Consulting SEO",
+     subtitle: "Audit technique complet",
+     unitPriceEuros: 500,
+     category: "Marketing",
+     description: "Optimisation pour les moteurs de recherche",
+     isPremium: false,
+   };
 
     it("devrait rejeter l'opération si l'utilisateur n'est pas authentifié", async () => {
       (getClerkUserId as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
@@ -67,8 +68,7 @@ describe("Catalog Actions - Business Logic Validation", () => {
       );
       const offerId = "offer_abc_123";
 
-      await upsertCatalogOffer({ id: offerId, ...mockOffer });
-
+await upsertCatalogOffer({ ...mockOffer, id: "offer_abc_123" });
       expect(db.catalogOffer.update).toHaveBeenCalledWith({
         where: { id: offerId },
         data: {
