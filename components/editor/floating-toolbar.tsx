@@ -2,15 +2,15 @@
 
 import React, { useState } from "react";
 import {
-  Printer,
-  ZoomIn,
-  ZoomOut,
-  Loader2,
-  Eye,
-  Edit3,
-  LayoutTemplate,
-  Cloud,
-} from "lucide-react";
+  PrinterIcon,
+  MagnifyingGlassMinusIcon,
+  MagnifyingGlassPlusIcon,
+  CircleNotchIcon,
+  EyeIcon,
+  PencilSimpleIcon,
+  LayoutIcon,
+  CloudCheckIcon,
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -30,7 +30,10 @@ interface FloatingToolbarProps {
   onThemeChange: (id: string) => void;
 }
 
-// --- SOUS-COMPOSANT : BOUTON TOOLBAR ---
+/**
+ * COMPOSANT : ToolbarBtn
+ * MISSION : Bouton industriel haute précision
+ */
 const ToolbarBtn = ({
   active = false,
   disabled = false,
@@ -42,7 +45,7 @@ const ToolbarBtn = ({
   active?: boolean;
   disabled?: boolean;
   onClick: () => void;
-  icon: React.ElementType;
+  icon: any;
   title: string;
   className?: string;
 }) => (
@@ -53,15 +56,15 @@ const ToolbarBtn = ({
     disabled={disabled}
     title={title}
     className={cn(
-      "h-9 w-9 rounded-lg transition-all",
+      "h-10 w-10 rounded-none transition-none border-none",
       active
-        ? "bg-zinc-900 text-white shadow-md ring-1 ring-zinc-900"
-        : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900",
-      disabled && "opacity-50 cursor-not-allowed",
+        ? "bg-slate-950 text-white"
+        : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+      disabled && "opacity-30 cursor-not-allowed",
       className
     )}
   >
-    <Icon className="w-4 h-4" strokeWidth={active ? 2.5 : 2} />
+    <Icon size={18} weight={active ? "fill" : "bold"} />
   </Button>
 );
 
@@ -84,16 +87,16 @@ export const FloatingToolbar = ({
   const [showThemeMenu, setShowThemeMenu] = useState(false);
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      {/* --- MENU THEMES (Pop-up Stratégique) --- */}
+    <div className="flex flex-col items-center">
+      {/* --- MENU THEMES (Industrial Pop-over) --- */}
       {showThemeMenu && (
-        <div className="mb-2 w-60 bg-white border border-zinc-200 shadow-2xl rounded-xl p-2 animate-in slide-in-from-bottom-2 fade-in duration-200 z-50">
-          <div className="px-2 py-1.5 border-b border-zinc-100 mb-1">
-            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
-              Identité Visuelle
+        <div className="mb-0 w-64 bg-white border border-slate-950 border-b-0 p-0 z-50 animate-in slide-in-from-bottom-1 duration-150">
+          <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
+              System_Themes
             </span>
           </div>
-          <div className="flex flex-col gap-0.5 max-h-50 overflow-y-auto">
+          <div className="flex flex-col max-h-60 overflow-y-auto scrollbar-none">
             {themes.map((theme) => {
               const isActive = activeThemeId === theme.id;
               return (
@@ -104,24 +107,25 @@ export const FloatingToolbar = ({
                     setShowThemeMenu(false);
                   }}
                   className={cn(
-                    "flex items-center gap-3 w-full text-left rounded-md p-2 transition-all group",
-                    isActive ? "bg-zinc-100" : "hover:bg-zinc-50"
+                    "flex items-center gap-3 w-full text-left p-3 border-b border-slate-50 last:border-0 transition-none",
+                    isActive ? "bg-indigo-50/50" : "hover:bg-slate-50"
                   )}
                 >
                   <div
-                    className="w-3 h-3 rounded-full shrink-0 shadow-sm border border-black/5"
+                    className="w-3 h-3 rounded-none shrink-0 border border-slate-900/10"
                     style={{ backgroundColor: theme.color }}
                   />
                   <span
                     className={cn(
-                      "text-[11px] uppercase tracking-tight font-bold truncate",
-                      isActive
-                        ? "text-zinc-900"
-                        : "text-zinc-500 group-hover:text-zinc-900"
+                      "text-[10px] uppercase font-bold tracking-tight",
+                      isActive ? "text-indigo-600" : "text-slate-600"
                     )}
                   >
                     {theme.name}
                   </span>
+                  {isActive && (
+                    <div className="ml-auto w-1 h-1 bg-indigo-600" />
+                  )}
                 </button>
               );
             })}
@@ -129,87 +133,79 @@ export const FloatingToolbar = ({
         </div>
       )}
 
-      {/* --- BARRE PRINCIPALE --- */}
-      <div className="flex items-center gap-1 p-1.5 bg-white border border-zinc-200 shadow-2xl rounded-xl ring-1 ring-black/5">
-        {/* SECTION 1 : MODES D'ÉDITION */}
-        <div className="flex items-center bg-zinc-100 rounded-lg p-0.5 gap-0.5">
+      {/* --- BARRE PRINCIPALE (Industrial Frame) --- */}
+      <div className="flex items-center bg-white border border-slate-950 shadow-[5px_5px_0px_rgba(0,0,0,0.1)] rounded-none p-0 overflow-hidden">
+        {/* SECTION 1 : ENGINE MODES */}
+        <div className="flex items-center border-r border-slate-200">
           <ToolbarBtn
-            icon={Edit3}
-            title="Studio"
+            icon={PencilSimpleIcon}
+            title="Studio Mode"
             active={viewMode === "studio"}
             onClick={() => setViewMode("studio")}
           />
           <ToolbarBtn
-            icon={Eye}
-            title="Aperçu Client"
+            icon={EyeIcon}
+            title="Client Preview"
             active={viewMode === "preview"}
             onClick={() => setViewMode("preview")}
           />
         </div>
 
-        <div className="w-px h-4 bg-zinc-200 mx-1" />
-
-        {/* SECTION 2 : CONTRÔLE DU ZOOM */}
-        <div className="flex items-center gap-0.5">
+        {/* SECTION 2 : OPTICS (ZOOM) */}
+        <div className="flex items-center border-r border-slate-200">
           <ToolbarBtn
-            icon={ZoomOut}
-            title="Zoom Out"
+            icon={MagnifyingGlassMinusIcon}
+            title="Out"
             onClick={() => setZoom(Math.max(zoom - STEP, MIN_ZOOM))}
             disabled={zoom <= MIN_ZOOM}
           />
-          <button
-            onClick={() => setZoom(0.85)}
-            className="w-12 text-[10px] font-mono font-black text-zinc-600 hover:text-zinc-900 tabular-nums"
-          >
-            {Math.round(zoom * 100)}%
-          </button>
+          <div className="w-14 text-center">
+            <span className="text-[10px] font-mono font-black text-slate-900 tabular-nums">
+              {Math.round(zoom * 100)}%
+            </span>
+          </div>
           <ToolbarBtn
-            icon={ZoomIn}
-            title="Zoom In"
+            icon={MagnifyingGlassPlusIcon}
+            title="In"
             onClick={() => setZoom(Math.min(zoom + STEP, MAX_ZOOM))}
             disabled={zoom >= MAX_ZOOM}
           />
         </div>
 
-        <div className="w-px h-4 bg-zinc-200 mx-1" />
+        {/* SECTION 3 : STYLE ENGINE */}
+        <div className="border-r border-slate-200">
+          <ToolbarBtn
+            icon={LayoutIcon}
+            title="Themes"
+            active={showThemeMenu}
+            onClick={() => setShowThemeMenu(!showThemeMenu)}
+          />
+        </div>
 
-        {/* SECTION 3 : STYLE (THEMES) */}
-        <ToolbarBtn
-          icon={LayoutTemplate}
-          title="Thèmes"
-          active={showThemeMenu}
-          onClick={() => setShowThemeMenu(!showThemeMenu)}
-        />
-
-        <div className="w-px h-4 bg-zinc-200 mx-1" />
-
-        {/* SECTION 4 : SAUVEGARDE & EXPORT */}
-        <div className="flex items-center gap-1">
+        {/* SECTION 4 : DEPLOYMENT (SAVE & PRINT) */}
+        <div className="flex items-center">
           <Button
             variant="ghost"
             size="icon"
             onClick={onSave}
             disabled={isSaving}
-            className={cn(
-              "h-9 w-9 rounded-lg transition-all",
-              isSaving
-                ? "animate-pulse"
-                : "hover:bg-zinc-100 text-zinc-600 hover:text-zinc-900"
-            )}
+            className="h-10 w-10 rounded-none text-slate-500 hover:bg-slate-100 transition-none"
           >
             {isSaving ? (
-              <Loader2 className="w-4 h-4 animate-spin text-zinc-900" />
+              <CircleNotchIcon className="w-4 h-4 animate-spin text-indigo-600" />
             ) : (
-              <Cloud className="w-4 h-4" />
+              <CloudCheckIcon size={18} weight="bold" />
             )}
           </Button>
 
           <Button
-            size="icon"
             onClick={onPrint}
-            className="h-9 w-9 rounded-lg bg-zinc-900 hover:bg-black text-white shadow-lg transition-all active:scale-95"
+            className="h-10 px-4 rounded-none bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 transition-none border-l border-slate-950/10"
           >
-            <Printer className="w-4 h-4" />
+            <PrinterIcon size={18} weight="bold" />
+            <span className="text-[10px] font-black uppercase tracking-widest">
+              Print
+            </span>
           </Button>
         </div>
       </div>

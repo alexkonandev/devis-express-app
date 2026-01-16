@@ -26,9 +26,8 @@ export default async function CatalogPage() {
   const initialItems = await getCatalogOffers();
 
   return (
-    <div className="min-h-screen bg-zinc-50/50">
-      {/* On injecte les données typées dans la vue unifiée */}
+
       <UnifiedCatalogView initialItems={initialItems} />
-    </div>
+  
   );
 }

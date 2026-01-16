@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, Zap } from "lucide-react";
+import { Plus, Zap, ArrowRight } from "lucide-react";
+
 interface SuggestedService {
   id: string;
   title: string;
-  price: number; // Changé de unitPriceEuros -> price
-  category: string; // Ajouté pour correspondre au retour backend
+  price: number;
+  category: string;
 }
 
 interface SuggestedServicesProps {
@@ -17,26 +18,31 @@ export function SuggestedServices({ services }: SuggestedServicesProps) {
   if (!services || services.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2 px-1">
-        <Zap className="w-3 h-3 text-zinc-400" />
-        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+    <div className="flex flex-col gap-6 font-sans">
+      {/* LABEL SECTION : Intelligence Actionnable */}
+      <div className="flex items-center gap-3 px-1">
+        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-[--primary]/10">
+          <Zap className="w-3.5 h-3.5 text-[--primary]" />
+        </div>
+        <span className="text-[11px] font-black uppercase tracking-[0.25em] text-[--foreground]/50">
           Templates de services suggérés
         </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {services.map((service) => (
           <div
             key={service.id}
-            className="group p-6 bg-white border border-zinc-200 rounded-sm hover:border-zinc-900 transition-all flex flex-col justify-between min-h-40"
+            className="group relative p-6 bg-white border border-[--border] rounded-[10px] hover:border-[--primary] hover:shadow-xl hover:shadow-[--primary]/5 transition-all duration-300 flex flex-col justify-between min-h-45"
           >
             <div className="flex justify-between items-start">
-              {/* On affiche la catégorie puisque le billingModel n'est pas renvoyé par l'action */}
-              <span className="text-[9px] font-black border border-zinc-900 px-1.5 py-0.5 uppercase tracking-tighter text-zinc-900">
+              {/* Badge Catégorie : Standard Expert */}
+              <span className="text-[9px] font-black bg-[--foreground] text-white px-2 py-1 rounded-lg uppercase tracking-wider">
                 {service.category}
               </span>
-              <span className="text-sm font-bold text-zinc-900 font-mono">
+
+              {/* Prix : JetBrains Mono pour la valeur marchande */}
+              <span className="text-sm font-bold text-[--foreground] font-mono tabular-nums bg-[--muted] px-2 py-1 rounded-lg">
                 {new Intl.NumberFormat("fr-FR", {
                   style: "currency",
                   currency: "EUR",
@@ -45,18 +51,20 @@ export function SuggestedServices({ services }: SuggestedServicesProps) {
               </span>
             </div>
 
-            <h3 className="text-sm font-black uppercase italic leading-tight mt-4 mb-6 max-w-50">
+            {/* Titre : Figtree ExtraBold pour l'impact */}
+            <h3 className="text-lg font-extrabold text-[--foreground] leading-tight mt-6 mb-8 group-hover:text-[--primary] transition-colors">
               {service.title}
             </h3>
 
             <Link
               href={`/editor?templateId=${service.id}`}
-              className="w-full py-2.5 border border-zinc-200 group-hover:border-zinc-900 flex items-center justify-center gap-2 transition-all bg-white text-zinc-900 no-underline"
+              className="w-full h-11 bg-[--muted] hover:bg-[--primary] text-[--foreground] hover:text-[--primary-fg] rounded-xl flex items-center justify-center gap-2 transition-all duration-200 font-bold group/btn"
             >
-              <Plus className="w-3 h-3" />
-              <span className="text-[9px] font-bold uppercase tracking-widest">
+              <Plus className="w-4 h-4 transition-transform group-hover/btn:rotate-90" />
+              <span className="text-[10px] font-black uppercase tracking-widest">
                 Utiliser ce template
               </span>
+              <ArrowRight className="w-3 h-3 opacity-0 -translate-x-2 group-hover/btn:opacity-100 group-hover/btn:translate-x-0 transition-all" />
             </Link>
           </div>
         ))}

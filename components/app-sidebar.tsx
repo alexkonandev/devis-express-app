@@ -4,15 +4,20 @@ import { ElementType } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useUser, useClerk } from "@clerk/nextjs";
+/**
+ * Utilisation des imports PascalCase avec suffixe Icon
+ * pour éliminer les warnings de dépréciation.
+ */
 import {
-  LayoutDashboard,
-  Users,
-  Package,
-  Settings,
-  PlusSquare,
-  FileText,
-  CreditCard,
-} from "lucide-react";
+  SquaresFourIcon,
+  FileTextIcon,
+  UsersThreeIcon,
+  PackageIcon,
+  PlusIcon,
+  CreditCardIcon,
+  GearSixIcon, // gear devient gear-six-icon
+  SignOutIcon,
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -23,10 +28,10 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const MAIN_NAV = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Quotes", href: "/quotes", icon: FileText },
-  { label: "Clients", href: "/clients", icon: Users },
-  { label: "Catalog", href: "/catalog", icon: Package },
+  { label: "Dashboard", href: "/dashboard", icon: SquaresFourIcon },
+  { label: "Devis", href: "/quotes", icon: FileTextIcon },
+  { label: "Clients", href: "/clients", icon: UsersThreeIcon },
+  { label: "Catalogue", href: "/catalog", icon: PackageIcon },
 ] as const;
 
 export function AppSidebar() {
@@ -41,8 +46,10 @@ export function AppSidebar() {
   };
 
   return (
-    <aside className="h-full w-15 bg-white flex flex-col items-center py-4 gap-6 shrink-0 border-r border-zinc-200">
-      <nav className="flex flex-col gap-2 w-full px-2">
+    <aside className="h-full w-14 bg-white flex flex-col items-center shrink-0 border-r border-slate-200 z-50 overflow-hidden">
+  
+      {/* PRIMARY NAVIGATION */}
+      <nav className="flex flex-col w-full flex-1 mt-2">
         {MAIN_NAV.map((item) => (
           <NavIcon
             key={item.href}
@@ -50,42 +57,48 @@ export function AppSidebar() {
             isActive={pathname.startsWith(item.href)}
           />
         ))}
-      </nav>
 
-      <div className="w-full px-2 mt-auto pb-4 border-b border-zinc-100">
+        {/* QUICK ACTION DIVIDER */}
+        <div className="mx-3 my-4 border-t border-slate-100" />
+
         <NavIcon
-          label="New Quote"
+          label="Nouveau Devis"
           href="/quotes/editor"
-          icon={PlusSquare}
+          icon={PlusIcon}
           isActive={pathname === "/quotes/editor"}
           isAction
         />
-      </div>
+      </nav>
 
-      <div className="flex flex-col gap-3 items-center w-full px-2">
+      {/* SYSTEM NAVIGATION (BOTTOM) */}
+      <div className="flex flex-col w-full border-t border-slate-100 bg-slate-50/30">
         <NavIcon
-          label="Billing"
+          label="Facturation"
           href="/billing"
-          icon={CreditCard}
+          icon={CreditCardIcon}
           isActive={pathname === "/billing"}
         />
         <NavIcon
-          label="Settings"
+          label="Configuration"
           href="/settings"
-          icon={Settings}
+          icon={GearSixIcon}
           isActive={pathname === "/settings"}
         />
 
+        {/* AUTH UNIT */}
         <TooltipProvider delayDuration={0}>
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 onClick={handleSignOut}
-                className="w-8 h-8 rounded-full ring-2 ring-offset-2 ring-transparent hover:ring-zinc-100 transition-all mt-1"
+                className="w-full h-14 flex items-center justify-center hover:bg-rose-50 group border-t border-slate-100 transition-colors"
               >
-                <Avatar className="w-8 h-8 border border-zinc-200">
-                  <AvatarImage src={user?.imageUrl} />
-                  <AvatarFallback className="bg-zinc-900 text-[10px] text-white font-bold">
+                <Avatar className="w-6 h-6 rounded-none border border-slate-300 grayscale group-hover:grayscale-0 transition-all">
+                  <AvatarImage
+                    src={user?.imageUrl}
+                    className="rounded-none object-cover"
+                  />
+                  <AvatarFallback className="bg-slate-950 text-[8px] text-white font-black rounded-none">
                     {user?.firstName?.charAt(0) || "U"}
                   </AvatarFallback>
                 </Avatar>
@@ -93,12 +106,14 @@ export function AppSidebar() {
             </TooltipTrigger>
             <TooltipContent
               side="right"
-              className="bg-zinc-900 text-white border-none text-xs font-bold"
+              className="bg-slate-950 text-white border-none text-[10px] font-black uppercase tracking-[0.2em] rounded-none ml-2"
             >
-              <p>{user?.fullName}</p>
-              <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-tighter">
-                Sign out
-              </p>
+              <div className="flex flex-col gap-1">
+                <span>{user?.fullName}</span>
+                <span className="text-rose-500 flex items-center gap-1 opacity-80 uppercase">
+                  <SignOutIcon size={12} weight="bold" /> Logout
+                </span>
+              </div>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -110,7 +125,7 @@ export function AppSidebar() {
 interface NavIconProps {
   label: string;
   href: string;
-  icon: ElementType; // Remplacement de any
+  icon: ElementType;
   isActive: boolean;
   isAction?: boolean;
 }
@@ -129,26 +144,28 @@ function NavIcon({
           <Link
             href={href}
             className={cn(
-              "w-full h-10 flex items-center justify-center rounded-lg transition-all duration-200 group relative",
+              "w-full h-14 flex items-center justify-center transition-none relative group",
               isAction
-                ? "bg-zinc-900 text-white hover:bg-zinc-800 shadow-md"
+                ? "text-indigo-600 hover:bg-indigo-50"
                 : isActive
-                ? "bg-zinc-100 text-zinc-900"
-                : "text-zinc-400 hover:text-zinc-900 hover:bg-zinc-50"
+                ? "bg-white text-slate-950"
+                : "text-slate-400 hover:text-slate-950 hover:bg-slate-50"
             )}
           >
-            <Icon
-              className="w-5 h-5"
-              strokeWidth={isActive || isAction ? 2.5 : 2}
-            />
-            {isActive && !isAction && (
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-zinc-900 rounded-r-full" />
+            {/* INDICATEUR DE FOCUS ACTIF (Blueprint Style) */}
+            {isActive && (
+              <div className="absolute left-0 top-0 w-[2px] h-full bg-indigo-600" />
             )}
+
+            <Icon
+              size={20}
+              weight={isActive || isAction ? "bold" : "regular"}
+            />
           </Link>
         </TooltipTrigger>
         <TooltipContent
           side="right"
-          className="bg-zinc-900 text-white border-none font-bold text-[11px] uppercase tracking-wider"
+          className="bg-slate-950 text-white border-none font-black text-[10px] uppercase tracking-[0.2em] rounded-none ml-2"
         >
           {label}
         </TooltipContent>

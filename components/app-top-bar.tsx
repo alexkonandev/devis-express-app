@@ -1,43 +1,60 @@
 "use client";
 
-import Link from "next/link";
-import Image from "next/image";
-import { Bell, CloudCheck } from "lucide-react";
+import { CloudCheckIcon, BellIcon } from "@phosphor-icons/react";
 import { AppBreadcrumb } from "@/components/layout/app-breadcrumb";
+import { Logo } from "./ui/logo";
 
 export function AppTopBar() {
   return (
-    <div className="h-10 w-full border-b border-zinc-200 bg-white flex items-center justify-between px-4 shrink-0 select-none sticky top-0 z-30">
-      <div className="flex items-center gap-4">
-        <Link
-          href="/dashboard"
-          className="shrink-0 transition-transform active:scale-95"
-        >
-          <Image
-            src="/logo.png"
-            alt="Logo"
-            width={80}
-            height={32}
-            className="h-4 w-auto grayscale contrast-125"
-            priority
-          />
-        </Link>
-        <div className="w-px h-4 bg-zinc-200 mx-1" />
-        <AppBreadcrumb />
-      </div>
-
-     
-
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-1.5 text-[9px] text-emerald-600 font-black tracking-widest">
-          <CloudCheck className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline uppercase">Données à jour</span>
+    <header className="h-10 w-full border-b border-slate-200 bg-white flex items-center justify-between px-6 shrink-0 select-none sticky top-0 z-40">
+      {/* SECTION GAUCHE : CONTEXTE SYSTÈME */}
+      <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
+          <Logo variant="icon" className="h-5 w-5 grayscale contrast-125" />
+          <div className="w-px h-4 bg-slate-200 mx-1" />
         </div>
-        <button className="text-zinc-400 hover:text-zinc-900 transition-colors relative group">
-          <Bell className="w-4 h-4" />
-          <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-zinc-900 rounded-full border border-white group-hover:scale-110 transition-transform" />
-        </button>
+
+        <div className="flex items-center">
+          <AppBreadcrumb />
+        </div>
       </div>
-    </div>
+
+      {/* SECTION DROITE : STATUS & TELEMETRY */}
+      <div className="flex items-center gap-8">
+        {/* SYNC INDICATOR */}
+        <div className="flex items-center gap-2 px-2 py-1 bg-emerald-50 border border-emerald-100">
+          <CloudCheckIcon
+            size={14}
+            weight="bold"
+            className="text-emerald-600"
+          />
+          <span className="text-[8px] text-emerald-700 font-black tracking-[0.2em] uppercase">
+            Sync: Optimal
+          </span>
+        </div>
+
+        {/* NOTIFICATIONS CHIRURGICALES */}
+        <button className="relative p-1.5 text-slate-400 hover:text-slate-950 transition-none group">
+          <BellIcon size={18} weight="bold" className="text-slate-950" />
+          {/* Badge de notification : Carré Blueprint (Zéro arrondi) */}
+          <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-indigo-600 border border-white" />
+        </button>
+
+        <div className="h-4 w-px bg-slate-200" />
+
+        {/* LOG DE SESSION - Rigueur Nomad Digital */}
+        <div className="hidden lg:flex flex-col items-end">
+          <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest leading-none">
+            Node: 01_Abidjan
+          </span>
+          <span className="text-[9px] font-mono text-slate-950 mt-0.5 tabular-nums">
+            {new Date().toLocaleTimeString("fr-FR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+        </div>
+      </div>
+    </header>
   );
 }

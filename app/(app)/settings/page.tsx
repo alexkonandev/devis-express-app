@@ -31,8 +31,8 @@ export default async function SettingsPage() {
   };
 
   return (
-    <div className="flex-1 w-full bg-[#FAFAFA] p-8">
+
       <SettingsForm initialData={initialData} isPro={isPro} />
-    </div>
+ 
   );
 }

@@ -17,10 +17,8 @@ export default async function ClientsPage() {
   const initialClients = await getClients();
 
   return (
-    <main className="min-h-screen bg-zinc-50/50">
-      <div className="p-6 md:p-10 max-w-400 mx-auto w-full">
+    
         <ClientsView initialData={initialClients} />
-      </div>
-    </main>
+  
   );
 }

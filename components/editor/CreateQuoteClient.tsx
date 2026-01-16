@@ -3,7 +3,6 @@
 import React, { useState, useRef, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
 
 // --- UI COMPONENTS ---
 import { QuoteEditorLayout } from "@/components/editor/quote-editor-layout";
@@ -223,6 +222,9 @@ export default function CreateQuoteClient({
 
   return (
     <QuoteEditorLayout
+      // ✅ On passe les propriétés obligatoires au Layout
+      viewMode={viewMode}
+      zoom={zoom}
       leftSidebar={
         viewMode === "studio" && (
           <StudioSidebarLeft
@@ -263,23 +265,14 @@ export default function CreateQuoteClient({
         />
       }
     >
-      <div
-        className={cn(
-          "flex justify-center items-start pt-12 pb-32 min-h-full transition-all duration-300 origin-top",
-          viewMode === "preview" ? "bg-zinc-900/40 scale-100" : ""
-        )}
-        style={{
-          transform: viewMode === "studio" ? `scale(${zoom})` : undefined,
-        }}
-      >
-        <div id="printable-content" className="shadow-2xl shadow-black/10">
-          <QuoteVisualizer
-            data={activeQuote}
-            theme={activeThemeObject}
-            printRef={printRef as React.RefObject<HTMLDivElement>}
-          />
-        </div>
-      </div>
+      {/* L'enveloppe est maintenant UNIQUE. 
+      Le Layout gère l'ID #printable-content, l'ombre et le zoom.
+    */}
+      <QuoteVisualizer
+        data={activeQuote}
+        theme={activeThemeObject}
+        printRef={printRef as React.RefObject<HTMLDivElement>}
+      />
     </QuoteEditorLayout>
   );
 }

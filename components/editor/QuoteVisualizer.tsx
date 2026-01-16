@@ -2,52 +2,103 @@
 
 import React from "react";
 import PrintableQuote from "@/components/pdf/printable-quote";
+import { MonitorIcon, FilePdfIcon, ArrowsOutIcon } from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
 
-// --- TYPES STRICTS (Zéro Any - Alignement DB/Interface) ---
+// --- TYPES STRICTS ---
 import { EditorActiveQuote, EditorTheme } from "@/types/editor";
 
 interface QuoteVisualizerProps {
-  data: EditorActiveQuote;
-  theme: EditorTheme;
+  data: EditorActiveQuote | null; // Strict null handling
+  theme: EditorTheme | undefined;
   printRef: React.RefObject<HTMLDivElement | null>;
 }
 
 /**
- * Composant de prévisualisation du devis.
- * Gère l'affichage dynamique dans le studio et le fallback en cas de DB vide.
+ * COMPOSANT : QuoteVisualizer
+ * MISSION : Environnement de contrôle pour le rendu final.
+ * STRUCTURE : Blueprint v3.0 (Focus Mode)
  */
 export const QuoteVisualizer = ({
   data,
   theme,
   printRef,
 }: QuoteVisualizerProps) => {
-  // Sécurité : Si les données du devis ne sont pas encore chargées
+  // 1. GESTION DES ÉTATS D'ATTENTE (Structure Blueprint)
   if (!data) {
     return (
-      <div className="p-20 text-zinc-400 font-black uppercase tracking-widest text-center border-2 border-dashed border-zinc-100 rounded-xl">
-        Initialisation des données...
+      <div className="flex-1 flex items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-2 border-slate-200 border-t-indigo-600 animate-spin" />
+          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
+            Initialisation_Systeme...
+          </span>
+        </div>
       </div>
     );
   }
 
+  // Fallback de thème typé
+  const effectiveTheme: EditorTheme = theme || {
+    id: "default-fallback",
+    name: "Design Standard",
+    baseLayout: "swiss",
+    color: "#4f46e5",
+    config: {},
+  };
+
   return (
-    <div className="flex justify-center items-start cursor-default select-none print:p-0 print:m-0 animate-in fade-in duration-500">
-      <PrintableQuote
-        ref={printRef}
-        quote={data}
-        // ✅ GESTION DU ZERO-DATA STATE :
-        // Si aucune donnée n'est en DB (theme undefined), on injecte un fallback
-        // pour que le devis s'affiche immédiatement sans erreur TS.
-        theme={
-          theme || {
-            id: "default-fallback",
-            name: "Design Standard",
-            baseLayout: "swiss",
-            color: "#18181b",
-            config: {},
-          }
-        }
-      />
+    <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden relative">
+      {/* 2. BARRE D'ÉTAT DU VISUALISEUR (Metadata Look) */}
+      <div className="h-10 shrink-0 bg-white border-b border-slate-200 flex items-center justify-between px-4 z-10">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <MonitorIcon size={14} weight="bold" className="text-indigo-600" />
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-900">
+              Studio_Preview
+            </span>
+          </div>
+          <div className="h-4 w-[1px] bg-slate-200" />
+          <div className="flex items-center gap-4">
+            <span className="text-[9px] font-bold text-slate-400 uppercase">
+              Zoom: Auto
+            </span>
+            <span className="text-[9px] font-bold text-slate-400 uppercase">
+              Format: A4_Standard
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button className="p-1.5 text-slate-400 hover:text-indigo-600 transition-none">
+            <ArrowsOutIcon size={16} />
+          </button>
+          <div className="h-4 w-[1px] bg-slate-200" />
+          <div className="flex items-center gap-2 px-2 py-1 bg-slate-950 text-white select-none">
+            <FilePdfIcon size={14} weight="duotone" />
+            <span className="text-[9px] font-black uppercase tracking-tight">
+              Render_Ready
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. ZONE DE RENDU (Blueprint Workspace) */}
+      <div className="flex-1 overflow-y-auto  scrollbar-none flex justify-center items-start">
+        {/* Conteneur de la feuille avec ombre portée industrielle */}
+        <div
+          className={cn(
+            "bg-white shadow-[20px_20px_60px_rgba(0,0,0,0.05)] border border-slate-200 rounded-none",
+            "transition-all duration-300 ease-in-out",
+            "print:shadow-none print:border-0 print:m-0"
+          )}
+        >
+          <PrintableQuote ref={printRef} quote={data} theme={effectiveTheme} />
+        </div>
+      </div>
+
+      {/* 4. INDICATEUR DE FOCUS (Ligne de force Indigo v3.0) */}
+      <div className="absolute left-0 top-10 bottom-0 w-[1px] bg-indigo-500/30" />
     </div>
   );
 };

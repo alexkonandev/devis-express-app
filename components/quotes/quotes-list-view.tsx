@@ -1,412 +1,322 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
-import Link from "next/link";
+import React, { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   Plus,
   Search,
-  ArrowUpDown,
-  MoreHorizontal,
-  ArrowUpRight,
   Download,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
+  Send,
+  FileText,
+  User,
+  Calendar,
+  ArrowUpRight,
   Loader2,
-  X,
-  CheckSquare,
-  MinusSquare,
-  FileSpreadsheet,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/features/dashboard/status-badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
-
-// ✅ Importations depuis les contrats uniques (Langue Unique)
-import { QuoteFilters, PaginatedQuotes, QuoteListItem } from "@/types/quote";
+import { QuoteFilters, PaginatedQuotes } from "@/types/quote";
 
 interface QuotesListViewProps {
   initialData: PaginatedQuotes;
   currentFilters: QuoteFilters;
 }
 
-// --- SOUS-COMPOSANTS UI ---
-
-const StudioLabel = ({ children }: { children: React.ReactNode }) => (
-  <span className="text-[9px] font-black uppercase tracking-[0.15em] text-zinc-400 select-none">
-    {children}
-  </span>
-);
-
-const StudioValue = ({ value }: { value: number }) => (
-  <span className="font-mono font-bold text-zinc-900 tracking-tighter text-sm">
-    {new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "EUR",
-    }).format(value)}
-  </span>
-);
-
+/**
+ * @view QuotesListView v5.0 - Industrial OS
+ * Psychologie : Flux Séquentiel (Master-Detail).
+ * Technique : h-screen overflow-hidden, p-0, rounded-none.
+ */
 export function QuotesListView({
   initialData,
   currentFilters,
 }: QuotesListViewProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState(currentFilters.search || "");
+  const [selectedId, setSelectedId] = useState<string | null>(
+    initialData.items[0]?.id || null
+  );
 
-  // On utilise 'items' provenant de notre structure PaginatedQuotes
-const quotes: QuoteListItem[] = initialData.items;
-  // --- NAVIGATION & FILTRES ---
+  const quotes = initialData.items;
+  const selectedQuote = useMemo(
+    () => quotes.find((q) => q.id === selectedId),
+    [selectedId, quotes]
+  );
 
   const updateUrl = (newFilters: Partial<QuoteFilters>) => {
     const params = new URLSearchParams();
     const merged = { ...currentFilters, ...newFilters };
-
     Object.entries(merged).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== "") {
         params.set(key, String(value));
       }
     });
-
     startTransition(() => {
       router.push(`/quotes?${params.toString()}`);
     });
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateUrl({ search: searchTerm, page: 1 });
-  };
-
-  const toggleSort = (field: QuoteFilters["sortBy"]) => {
-    const isAsc =
-      currentFilters.sortBy === field && currentFilters.sortDir === "asc";
-    updateUrl({ sortBy: field, sortDir: isAsc ? "desc" : "asc" });
-  };
-
-  // --- ACTIONS ---
-
-  const handleExportCSV = () => {
-    const dataToExport =
-      selectedIds.length > 0
-        ? quotes.filter((q) => selectedIds.includes(q.id))
-        : quotes;
-
-    const headers = ["Référence", "Client", "Statut", "Date", "Montant"];
-    const rows = dataToExport.map((q) => [
-      q.number,
-      q.clientName,
-      q.status,
-      format(new Date(q.updatedAt), "dd/MM/yyyy"),
-      q.totalAmount,
-    ]);
-
-    const content = [headers.join(","), ...rows.map((r) => r.join(","))].join(
-      "\n"
-    );
-    const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `export-devis-${format(new Date(), "yyyy-MM-dd")}.csv`;
-    a.click();
-    toast.success("Export CSV généré");
-  };
-
   return (
-    <div className="p-6 md:p-10 max-w-400 mx-auto w-full">
-      <div className="flex flex-col gap-6 animate-in fade-in duration-500">
-        {/* TOOLBAR STRATÉGIQUE */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-zinc-200 shadow-sm">
-          <form onSubmit={handleSearch} className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-            <input
+    <div className="flex h-[calc(100vh-2.5rem)] overflow-hidden bg-white p-0 m-0 border-t border-slate-200">
+      {/* --- MASTER SIDEBAR : PSYCHOLOGIE DU FLUX (400px) --- */}
+      <div className="w-[400px] border-r border-slate-200 flex flex-col bg-slate-50/20 relative">
+        {/* Header Master : Densité & Action Rapide */}
+        <div className="p-4 bg-white border-b border-slate-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-4 bg-indigo-600" />
+              <h1 className="text-[14px] font-black uppercase tracking-widest text-slate-950">
+                Flux Devis
+              </h1>
+            </div>
+            <Button
+              onClick={() => router.push("/quotes/editor")}
+              className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white rounded-none h-8 text-[10px] font-black uppercase tracking-widest px-3"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1.5" /> Nouveau
+            </Button>
+          </div>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              updateUrl({ search: searchTerm, page: 1 });
+            }}
+            className="relative"
+          >
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Référence ou nom client..."
-              className="w-full pl-9 pr-4 h-10 bg-zinc-50 border-none rounded-lg text-xs font-medium focus:ring-2 focus:ring-zinc-900 transition-all outline-none"
+              placeholder="RÉFÉRENCE, CLIENT..."
+              className="pl-8 h-9 rounded-none border-slate-200 text-[11px] font-bold uppercase tracking-wider bg-slate-50 focus-visible:bg-white focus-visible:ring-0 focus-visible:border-slate-950 transition-all"
             />
           </form>
-
-          <div className="flex items-center gap-3">
-            <div className="flex bg-zinc-100 p-1 rounded-lg">
-              {["all", "DRAFT", "SENT", "PAID"].map((s) => (
-                <button
-                  key={s}
-                  onClick={() =>
-                    updateUrl({ status: s as QuoteFilters["status"], page: 1 })
-                  }
-                  className={cn(
-                    "px-4 py-1.5 text-[10px] font-black uppercase tracking-tight rounded-md transition-all",
-                    currentFilters.status === s
-                      ? "bg-white text-zinc-900 shadow-sm"
-                      : "text-zinc-500 hover:text-zinc-700"
-                  )}
-                >
-                  {s === "all" ? "Tous" : s}
-                </button>
-              ))}
-            </div>
-            <Link href="/quotes/new">
-              <Button
-                size="sm"
-                className="bg-zinc-900 text-white hover:bg-zinc-800 text-[10px] font-black uppercase px-6 h-10"
-              >
-                <Plus className="w-3.5 h-3.5 mr-2" /> Créer
-              </Button>
-            </Link>
-          </div>
         </div>
 
-        {/* TABLEAU HAUTE DENSITÉ */}
-        <div className="bg-white border border-zinc-200 rounded-xl shadow-sm overflow-hidden relative min-h-100">
+        {/* List Body : Scroll Localisé */}
+        <div className="flex-1 overflow-y-auto divide-y divide-slate-100 custom-scrollbar">
           {isPending && (
-            <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-20 flex items-center justify-center">
-              <Loader2 className="w-6 h-6 animate-spin text-zinc-900" />
+            <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] z-10 flex items-center justify-center">
+              <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />
             </div>
           )}
 
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-zinc-50/50 border-b border-zinc-100">
-                <th className="p-4 w-10">
-                  <button
-                    onClick={() =>
-                      setSelectedIds(
-                        selectedIds.length === quotes.length &&
-                          quotes.length > 0
-                          ? []
-                          : quotes.map((q) => q.id)
-                      )
-                    }
-                    className="text-zinc-400 hover:text-zinc-900 transition-colors"
-                  >
-                    {selectedIds.length > 0 &&
-                    selectedIds.length === quotes.length ? (
-                      <CheckSquare className="w-4 h-4 text-zinc-900" />
-                    ) : (
-                      <MinusSquare className="w-4 h-4" />
-                    )}
-                  </button>
-                </th>
-                <th
-                  className="p-4 cursor-pointer group"
-                  onClick={() => toggleSort("number")}
-                >
-                  <div className="flex items-center gap-2">
-                    <StudioLabel>Référence</StudioLabel>
-                    <ArrowUpDown
-                      className={cn(
-                        "w-3 h-3 transition-colors",
-                        currentFilters.sortBy === "number"
-                          ? "text-zinc-900"
-                          : "text-zinc-300 group-hover:text-zinc-500"
-                      )}
-                    />
-                  </div>
-                </th>
-                <th className="p-4">
-                  <StudioLabel>Client / Entité</StudioLabel>
-                </th>
-                <th className="p-4">
-                  <StudioLabel>Statut</StudioLabel>
-                </th>
-                <th
-                  className="p-4 text-right cursor-pointer group"
-                  onClick={() => toggleSort("totalAmount")}
-                >
-                  <div className="flex items-center justify-end gap-2">
-                    <StudioLabel>Montant TTC</StudioLabel>
-                    <ArrowUpDown
-                      className={cn(
-                        "w-3 h-3 transition-colors",
-                        currentFilters.sortBy === "totalAmount"
-                          ? "text-zinc-900"
-                          : "text-zinc-300 group-hover:text-zinc-500"
-                      )}
-                    />
-                  </div>
-                </th>
-                <th className="p-4"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-50">
-              {quotes.length > 0 ? (
-                quotes.map((quote) => (
-                  <tr
-                    key={quote.id}
-                    className={cn(
-                      "hover:bg-zinc-50/50 transition-colors group",
-                      selectedIds.includes(quote.id) && "bg-zinc-50"
-                    )}
-                  >
-                    <td className="p-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(quote.id)}
-                        onChange={() =>
-                          setSelectedIds((prev) =>
-                            prev.includes(quote.id)
-                              ? prev.filter((id) => id !== quote.id)
-                              : [...prev, quote.id]
-                          )
-                        }
-                        className="w-4 h-4 accent-zinc-900 rounded border-zinc-300 cursor-pointer"
-                      />
-                    </td>
-                    <td className="p-4">
-                      <Link
-                        href={`/quotes/${quote.id}`}
-                        className="font-mono text-[11px] font-bold text-zinc-500 hover:text-zinc-900 hover:underline underline-offset-4 uppercase"
-                      >
-                        {quote.number}
-                      </Link>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-black text-zinc-900 uppercase tracking-tight">
-                          {quote.clientName}
-                        </span>
-                        <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter">
-                          Mis à jour :{" "}
-                          {format(new Date(quote.updatedAt), "dd MMM yyyy", {
-                            locale: fr,
-                          })}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <StatusBadge status={quote.status} />
-                    </td>
-                    <td className="p-4 text-right">
-                      <StudioValue value={quote.totalAmount} />
-                    </td>
-                    <td className="p-4 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <MoreHorizontal className="w-4 h-4 text-zinc-400" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuLabel className="text-[10px] font-black uppercase">
-                            Actions
-                          </DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => router.push(`/quotes/${quote.id}`)}
-                            className="text-xs font-bold uppercase cursor-pointer"
-                          >
-                            <ArrowUpRight className="w-3.5 h-3.5 mr-2" /> Editer
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-xs font-bold uppercase cursor-pointer">
-                            <Download className="w-3.5 h-3.5 mr-2" /> PDF
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-xs font-bold uppercase cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
-                            <Trash2 className="w-3.5 h-3.5 mr-2" /> Supprimer
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={6} className="p-12 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <span className="text-[10px] font-black uppercase text-zinc-300 tracking-[0.2em]">
-                        Aucun dossier trouvé
-                      </span>
-                    </div>
-                  </td>
-                </tr>
+          {quotes.map((quote) => (
+            <div
+              key={quote.id}
+              onClick={() => setSelectedId(quote.id)}
+              className={cn(
+                "p-4 cursor-pointer transition-none relative border-l-[3px]",
+                selectedId === quote.id
+                  ? "bg-white border-l-indigo-600 shadow-sm"
+                  : "bg-transparent border-l-transparent hover:bg-slate-100/50"
               )}
-            </tbody>
-          </table>
-
-          {/* PAGINATION HAUTE PERFORMANCE */}
-          <div className="p-4 bg-zinc-50/50 border-t border-zinc-100 flex items-center justify-between">
-            <p className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">
-              Page {currentFilters.page} sur {initialData.totalPages} —{" "}
-              {initialData.totalCount} dossiers
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentFilters.page <= 1 || isPending}
-                onClick={() => updateUrl({ page: currentFilters.page - 1 })}
-                className="h-8 px-3 text-[10px] font-black uppercase border-zinc-200"
-              >
-                <ChevronLeft className="w-3.5 h-3.5 mr-1" /> Précédent
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={
-                  currentFilters.page >= initialData.totalPages || isPending
-                }
-                onClick={() => updateUrl({ page: currentFilters.page + 1 })}
-                className="h-8 px-3 text-[10px] font-black uppercase border-zinc-200"
-              >
-                Suivant <ChevronRight className="w-3.5 h-3.5 ml-1" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* BARRE D'ACTIONS FLOTTANTE */}
-        {selectedIds.length > 0 && (
-          <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-10">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-2 pl-6 flex items-center gap-6 shadow-2xl">
-              <p className="text-[10px] font-black uppercase text-white tracking-[0.2em]">
-                {selectedIds.length} sélectionnés
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={handleExportCSV}
-                  className="bg-zinc-800 hover:bg-zinc-700 text-white text-[10px] font-black uppercase h-9 px-4 border-none"
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5 mr-2 text-emerald-500" />{" "}
-                  Export CSV
-                </Button>
-                <Button
-                  variant="destructive"
-                  className="bg-red-600 hover:bg-red-500 text-white text-[10px] font-black uppercase h-9 px-4 border-none"
-                >
-                  <Trash2 className="w-3.5 h-3.5 mr-2" /> Supprimer
-                </Button>
-                <button
-                  onClick={() => setSelectedIds([])}
-                  className="p-2 text-zinc-500 hover:text-white transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+            >
+              <div className="flex justify-between items-start mb-1">
+                <span className="font-mono text-[10px] font-bold text-slate-400">
+                  {quote.number}
+                </span>
+                <StatusBadge status={quote.status} />
+              </div>
+              <h3 className="text-[12px] font-black text-slate-950 uppercase truncate">
+                {quote.clientName}
+              </h3>
+              <div className="flex justify-between items-baseline mt-2">
+                <span className="text-[14px] font-mono font-bold text-slate-950 tabular-nums">
+                  {new Intl.NumberFormat("fr-FR", {
+                    style: "currency",
+                    currency: "EUR",
+                  }).format(quote.totalAmount)}
+                </span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase">
+                  {format(new Date(quote.updatedAt), "dd.MM.yy")}
+                </span>
               </div>
             </div>
+          ))}
+        </div>
+
+        {/* Pagination Master */}
+        <div className="p-3 border-t border-slate-200 bg-white flex justify-between items-center">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-none h-7 px-3 text-[9px] font-black uppercase border-slate-200"
+            disabled={currentFilters.page <= 1}
+            onClick={() => updateUrl({ page: currentFilters.page - 1 })}
+          >
+            Prev
+          </Button>
+          <span className="text-[9px] font-black uppercase text-slate-400 tracking-tighter">
+            {currentFilters.page} / {initialData.totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-none h-7 px-3 text-[9px] font-black uppercase border-slate-200"
+            disabled={currentFilters.page >= initialData.totalPages}
+            onClick={() => updateUrl({ page: currentFilters.page + 1 })}
+          >
+            Next
+          </Button>
+        </div>
+      </div>
+
+      {/* --- DETAIL : ZONE DE TRAVAIL (SCROLL LOCAL) --- */}
+      <div className="flex-1 bg-white overflow-y-auto relative custom-scrollbar">
+        {selectedQuote ? (
+          <div className="max-w-5xl mx-auto p-10 space-y-10">
+            {/* Header Detail : Précis, Non-Massif */}
+            <div className="flex justify-between items-start border-b border-slate-100 pb-8">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600">
+                    Dossier Actif
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-300">
+                    ID: {selectedQuote.id}
+                  </span>
+                </div>
+                <h2 className="text-[24px] font-black text-slate-950 uppercase tracking-tighter italic leading-none">
+                  {selectedQuote.clientName}
+                </h2>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="rounded-none border-slate-950 border text-[10px] font-black uppercase h-9 px-4"
+                >
+                  <Download className="w-3.5 h-3.5 mr-2" /> PDF
+                </Button>
+                <Button className="bg-indigo-600 text-white rounded-none h-9 px-6 text-[10px] font-black uppercase tracking-widest shadow-none">
+                  <Send className="w-3.5 h-3.5 mr-2" /> Envoyer
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 rounded-none text-rose-600 hover:bg-rose-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Content Grid */}
+            <div className="grid grid-cols-12 gap-8">
+              {/* Colonne Gauche : Finances & Data */}
+              <div className="col-span-7 space-y-8">
+                <div className="border border-slate-200 rounded-none overflow-hidden">
+                  <div className="bg-slate-50 p-3 border-b border-slate-200 flex items-center gap-2">
+                    <div className="w-1 h-3 bg-indigo-600" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-950">
+                      Analyse Financière
+                    </span>
+                  </div>
+                  <div className="p-8 flex justify-between items-center">
+                    <div className="space-y-1">
+                      <StudioLabel>Base HT</StudioLabel>
+                      <p className="text-[20px] font-mono font-bold text-slate-950 tabular-nums">
+                        {new Intl.NumberFormat("fr-FR", {
+                          style: "currency",
+                          currency: "EUR",
+                        }).format(selectedQuote.totalAmount / 1.2)}
+                      </p>
+                    </div>
+                    <div className="h-10 w-[1px] bg-slate-100" />
+                    <div className="text-right space-y-1">
+                      <StudioLabel>Total TTC</StudioLabel>
+                      <p className="text-[32px] font-mono font-black text-indigo-600 tracking-tighter leading-none tabular-nums">
+                        {new Intl.NumberFormat("fr-FR", {
+                          style: "currency",
+                          currency: "EUR",
+                        }).format(selectedQuote.totalAmount)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-5 border border-slate-200 space-y-2 bg-white">
+                    <StudioLabel>Émission</StudioLabel>
+                    <div className="flex items-center gap-2 font-bold text-[13px] text-slate-950 uppercase">
+                      <Calendar className="w-4 h-4 text-indigo-600" />
+                      {format(
+                        new Date(selectedQuote.updatedAt),
+                        "dd MMMM yyyy",
+                        { locale: fr }
+                      )}
+                    </div>
+                  </div>
+                  <div className="p-5 border border-slate-200 space-y-2 bg-white">
+                    <StudioLabel>Référent</StudioLabel>
+                    <div className="flex items-center gap-2 font-bold text-[13px] text-slate-950 uppercase">
+                      <User className="w-4 h-4 text-indigo-600" />
+                      Admin System
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Colonne Droite : Tension & Psychologie */}
+              <div className="col-span-5 space-y-6">
+                {/* Bloc de Tension Noir */}
+                <div className="bg-slate-950 p-6 text-white space-y-6">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 italic">
+                      Vision Business
+                    </span>
+                    <p className="text-[13px] font-medium leading-relaxed">
+                      Dossier à haut potentiel. Marge estimée à{" "}
+                      <span className="text-indigo-400 font-black">35%</span>.
+                      Signature attendue sous 48h.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push(`/quotes/${selectedQuote.id}`)}
+                    className="w-full border-white/20 hover:bg-white/10 text-white rounded-none h-11 text-[11px] font-black uppercase tracking-widest"
+                  >
+                    <FileText className="w-4 h-4 mr-2" /> Accéder à l'Éditeur
+                  </Button>
+                </div>
+
+                {/* Secondaire */}
+                <Button
+                  variant="outline"
+                  className="w-full justify-between h-14 border-slate-200 rounded-none px-4 hover:border-slate-950 group transition-all"
+                >
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-950 italic">
+                    Full Screen View
+                  </span>
+                  <ArrowUpRight className="w-4 h-4 text-slate-300 group-hover:text-slate-950 transition-colors" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="h-full flex flex-col items-center justify-center bg-slate-50/20">
+            <div className="w-12 h-[1px] bg-slate-200 mb-6" />
+            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-300 animate-pulse">
+              Sélectionner une entité
+            </p>
+            <div className="w-12 h-[1px] bg-slate-200 mt-6" />
           </div>
         )}
       </div>
     </div>
   );
 }
+
+const StudioLabel = ({ children }: { children: React.ReactNode }) => (
+  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1">
+    {children}
+  </span>
+);

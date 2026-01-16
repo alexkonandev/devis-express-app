@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useTransition, useMemo } from "react";
 import {
   Search,
   Plus,
@@ -10,6 +10,9 @@ import {
   Edit2,
   Package,
   Trash2,
+  Loader2,
+  Check,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -25,23 +28,29 @@ import {
 import { CatalogListItem } from "@/types/catalog";
 import { upsertCatalogOffer } from "@/actions/catalog-action";
 
-// --- MICRO COMPOSANTS STUDIO (Zéro Any) ---
-const StudioLabel = ({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => (
-  <span
-    className={cn(
-      "text-[9px] font-bold uppercase tracking-widest text-zinc-400 select-none",
-      className
-    )}
-  >
-    {children}
-  </span>
-);
+/**
+ * NOTIFICATIONS DESIGN SYSTEM (ADN INDUSTRIEL)
+ */
+const notify = {
+  success: (msg: string) =>
+    toast.custom(() => (
+      <div className="bg-slate-950 border-2 border-indigo-600 p-4 flex items-center gap-3 w-[300px] shadow-2xl rounded-none animate-in slide-in-from-top-2">
+        <Check className="w-4 h-4 text-emerald-500" />
+        <p className="text-[10px] font-black uppercase text-white tracking-widest">
+          {msg}
+        </p>
+      </div>
+    )),
+  error: (msg: string) =>
+    toast.custom(() => (
+      <div className="bg-slate-950 border-2 border-rose-600 p-4 flex items-center gap-3 w-[300px] shadow-2xl rounded-none animate-in slide-in-from-top-2">
+        <AlertTriangle className="w-4 h-4 text-rose-600" />
+        <p className="text-[10px] font-black uppercase text-white tracking-widest">
+          {msg}
+        </p>
+      </div>
+    )),
+};
 
 interface UnifiedCatalogViewProps {
   initialItems: CatalogListItem[];
@@ -50,135 +59,136 @@ interface UnifiedCatalogViewProps {
 export default function UnifiedCatalogView({
   initialItems,
 }: UnifiedCatalogViewProps) {
+  const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"personal" | "library">("personal");
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // --- FILTRAGE LOCAL ---
+  // --- FILTRAGE PSYCHOLOGIE DE L'INVENTAIRE ---
   const filteredItems = useMemo(() => {
     return initialItems.filter((item) => {
       const matchesSearch =
         item.title.toLowerCase().includes(search.toLowerCase()) ||
         item.category.toLowerCase().includes(search.toLowerCase());
-
-      // Dans ton schéma actuel, tout est "personal" car lié à userId.
-      // Si tu ajoutes isPremium ou un système de template, on filtrera ici.
       const matchesTab = tab === "personal" ? !item.isPremium : item.isPremium;
       return matchesSearch && matchesTab;
     });
   }, [initialItems, search, tab]);
 
-  // --- ACTIONS ---
+  // --- MUTATION PRIX (VITESSE D'EXÉCUTION) ---
   const handlePriceUpdate = async (item: CatalogListItem, newPrice: string) => {
     const price = parseFloat(newPrice);
-    if (isNaN(price)) {
+    if (isNaN(price) || price === item.unitPriceEuros) {
       setEditingId(null);
       return;
     }
 
-    if (price === item.unitPriceEuros) {
-      setEditingId(null);
-      return;
-    }
+    startTransition(async () => {
+      const res = await upsertCatalogOffer({
+        ...item,
+        unitPriceEuros: price,
+      });
 
-    const res = await upsertCatalogOffer({
-      id: item.id,
-      title: item.title,
-      subtitle: item.subtitle,
-      unitPriceEuros: price,
-      category: item.category,
-      isPremium: item.isPremium,
+      if (res.success) notify.success("TARIF MIS À JOUR");
+      else notify.error("ERREUR DE SYNCHRONISATION");
+      setEditingId(null);
     });
-
-    if (res.success) {
-      toast.success("Prix mis à jour");
-    } else {
-      toast.error("Erreur lors de la mise à jour");
-    }
-    setEditingId(null);
   };
 
   return (
-    <div className="h-screen w-full bg-zinc-50/50 flex flex-col font-sans text-zinc-900 overflow-hidden">
-      {/* HEADER FIXE */}
-      <header className="shrink-0 bg-white border-b border-zinc-200 px-6 py-4 flex flex-col gap-4">
+    <div className="h-[calc(100vh-2.5rem)] w-full bg-white flex flex-col overflow-hidden border-t border-slate-200">
+      {/* HEADER : VISION DE L'INVENTAIRE */}
+      <header className="shrink-0 bg-white border-b border-slate-200 p-6 flex flex-col gap-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-lg font-black tracking-tight text-zinc-900 uppercase">
-              Catalogue
-            </h1>
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3">
+              <div className="w-1.5 h-6 bg-indigo-600" />
+              <h1 className="text-[20px] font-black uppercase tracking-tighter text-slate-950">
+                Catalogue Services
+              </h1>
+            </div>
 
-            {/* TABS SELECTOR */}
-            <div className="flex bg-zinc-100 p-0.5 rounded-sm border border-zinc-200">
+            {/* SELECTEUR DE FLUX (TABS) */}
+            <div className="flex bg-slate-100 p-1 border border-slate-200">
               <button
                 onClick={() => setTab("personal")}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-1 text-[10px] font-black uppercase tracking-wide rounded-[1px] transition-all",
+                  "flex items-center gap-2 px-4 py-1.5 text-[10px] font-black uppercase tracking-widest transition-none",
                   tab === "personal"
-                    ? "bg-white text-zinc-900 shadow-sm"
-                    : "text-zinc-500 hover:text-zinc-700"
+                    ? "bg-white text-slate-950 shadow-sm"
+                    : "text-slate-400 hover:text-slate-600"
                 )}
               >
-                <User className="w-3 h-3" /> Mes Services
+                <User className="w-3.5 h-3.5" /> Mes Actifs
               </button>
               <button
                 onClick={() => setTab("library")}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-1 text-[10px] font-black uppercase tracking-wide rounded-[1px] transition-all",
+                  "flex items-center gap-2 px-4 py-1.5 text-[10px] font-black uppercase tracking-widest transition-none",
                   tab === "library"
-                    ? "bg-white text-amber-600 shadow-sm"
-                    : "text-zinc-500 hover:text-zinc-700"
+                    ? "bg-white text-indigo-600 shadow-sm"
+                    : "text-slate-400 hover:text-slate-600"
                 )}
               >
-                <Library className="w-3 h-3" /> Premium
+                <Library className="w-3.5 h-3.5" /> Bibliothèque
               </button>
             </div>
           </div>
 
-          <Button className="bg-zinc-900 hover:bg-black text-white font-black h-8 px-4 rounded-sm text-[10px] uppercase shadow-sm active:scale-95 transition-all">
-            <Plus className="w-3.5 h-3.5 mr-2" /> Nouveau Service
+          <Button className="bg-slate-950 hover:bg-black text-white font-black h-10 px-6 rounded-none text-[11px] uppercase tracking-widest transition-none">
+            <Plus className="w-4 h-4 mr-2" /> Créer Service
           </Button>
         </div>
 
-        {/* Toolbar Recherche */}
-        <div className="flex items-center gap-2 max-w-lg">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher par titre ou catégorie..."
-              className="h-9 w-full pl-9 pr-3 bg-white border border-zinc-200 rounded-sm text-xs font-medium focus:outline-none focus:ring-1 focus:ring-zinc-900"
-            />
-          </div>
+        {/* BARRE DE RECHERCHE INDUSTRIELLE */}
+        <div className="relative max-w-xl">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="RECHERCHER RÉFÉRENCE OU CATÉGORIE..."
+            className="h-11 w-full pl-10 pr-4 bg-slate-50 border border-slate-200 rounded-none text-[11px] font-bold uppercase tracking-wider outline-none focus:border-slate-950 transition-all placeholder:text-slate-300"
+          />
         </div>
       </header>
 
-      {/* TABLEAU DATA GRID */}
-      <main className="flex-1 overflow-auto bg-white">
+      {/* ZONE DATA : TABLEAU DENSE */}
+      <main className="flex-1 overflow-y-auto relative custom-scrollbar">
+        {isPending && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-50 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+          </div>
+        )}
+
         <table className="w-full text-left border-collapse">
-          <thead className="bg-zinc-50 sticky top-0 z-10 border-b border-zinc-200 shadow-sm">
+          <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
             <tr>
-              <th className="py-3 px-6 w-[45%]">
-                <StudioLabel>Service</StudioLabel>
+              <th className="py-4 px-8 border-r border-slate-100">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                  Service / Nomenclature
+                </span>
               </th>
-              <th className="py-3 px-6 w-[20%]">
-                <StudioLabel>Catégorie</StudioLabel>
+              <th className="py-4 px-8 border-r border-slate-100">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                  Catégorie
+                </span>
               </th>
-              <th className="py-3 px-6 w-[20%] text-right">
-                <StudioLabel>Prix Unitaire HT</StudioLabel>
+              <th className="py-4 px-8 text-right border-r border-slate-100">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                  Prix HT (Mono)
+                </span>
               </th>
-              <th className="py-3 px-6 w-[15%] text-right"></th>
+              <th className="py-4 px-8 w-20 text-right bg-slate-50"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100">
+          <tbody className="divide-y divide-slate-100">
             {filteredItems.length === 0 ? (
               <tr>
-                <td colSpan={4} className="py-20 text-center">
-                  <div className="flex flex-col items-center gap-2">
-                    <Package className="w-8 h-8 text-zinc-200" />
-                    <span className="text-[10px] font-black uppercase text-zinc-300 tracking-[0.2em]">
-                      Aucun service trouvé
+                <td colSpan={4} className="py-32 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <Package className="w-10 h-10 text-slate-200" />
+                    <span className="text-[11px] font-black uppercase text-slate-300 tracking-[0.5em]">
+                      Inventaire Vide
                     </span>
                   </div>
                 </td>
@@ -187,43 +197,49 @@ export default function UnifiedCatalogView({
               filteredItems.map((item) => (
                 <tr
                   key={item.id}
-                  className="group hover:bg-zinc-50/50 transition-colors"
+                  className="group hover:bg-slate-50/80 transition-none border-b border-slate-100"
                 >
-                  <td className="py-4 px-6">
+                  <td className="py-5 px-8">
                     <div className="flex flex-col">
-                      <span className="text-sm font-black text-zinc-900 uppercase tracking-tight">
+                      <span className="text-[13px] font-black text-slate-950 uppercase tracking-tight group-hover:text-indigo-600 transition-colors">
                         {item.title}
                       </span>
                       {item.subtitle && (
-                        <span className="text-[10px] text-zinc-400 font-bold uppercase italic mt-0.5">
-                          {item.subtitle}
+                        <span className="text-[10px] text-slate-400 font-bold uppercase italic mt-1 tracking-tighter">
+                          // {item.subtitle}
                         </span>
                       )}
                     </div>
                   </td>
 
-                  <td className="py-4 px-6">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-black uppercase bg-zinc-100 text-zinc-500 border border-zinc-200">
+                  <td className="py-5 px-8">
+                    <span className="inline-flex items-center px-2.5 py-1 text-[9px] font-black uppercase bg-slate-100 text-slate-500 border border-slate-200 rounded-none">
                       {item.category}
                     </span>
                   </td>
 
-                  <td className="py-4 px-6 text-right">
+                  <td className="py-5 px-8 text-right">
                     {editingId === item.id ? (
-                      <input
-                        autoFocus
-                        type="number"
-                        defaultValue={item.unitPriceEuros}
-                        onBlur={(e) => handlePriceUpdate(item, e.target.value)}
-                        onKeyDown={(e) =>
-                          e.key === "Enter" && e.currentTarget.blur()
-                        }
-                        className="w-24 text-right text-xs font-mono font-black bg-white border border-zinc-900 rounded-sm px-2 py-1 focus:outline-none shadow-sm"
-                      />
+                      <div className="flex justify-end">
+                        <input
+                          autoFocus
+                          type="number"
+                          defaultValue={item.unitPriceEuros}
+                          onBlur={(e) =>
+                            handlePriceUpdate(item, e.target.value)
+                          }
+                          onKeyDown={(e) =>
+                            e.key === "Enter" && e.currentTarget.blur()
+                          }
+                          className="w-32 text-right text-[13px] font-mono font-black bg-white border-2 border-slate-950 rounded-none px-3 py-1.5 outline-none shadow-[4px_4px_0px_rgba(0,0,0,0.1)]"
+                        />
+                      </div>
                     ) : (
                       <span
-                        onClick={() => setEditingId(item.id)}
-                        className="font-mono text-sm font-black text-zinc-900 cursor-pointer hover:bg-zinc-100 px-2 py-1 rounded transition-colors"
+                        onClick={() =>
+                          setTab("personal") && setEditingId(item.id)
+                        } // Focus prix uniquement en mode modifiable
+                        className="font-mono text-[14px] font-black text-slate-950 cursor-pointer hover:bg-slate-950 hover:text-white px-3 py-1.5 transition-none tabular-nums"
                       >
                         {new Intl.NumberFormat("fr-FR", {
                           style: "currency",
@@ -233,30 +249,33 @@ export default function UnifiedCatalogView({
                     )}
                   </td>
 
-                  <td className="py-4 px-6 text-right">
+                  <td className="py-5 px-8 text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-zinc-300 hover:text-zinc-900 hover:bg-zinc-200 rounded-sm opacity-0 group-hover:opacity-100 transition-all"
+                          className="h-8 w-8 rounded-none border border-slate-200 hover:bg-slate-950 hover:text-white transition-none opacity-0 group-hover:opacity-100"
                         >
                           <MoreHorizontal className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuLabel className="text-[9px] uppercase font-black text-zinc-400">
-                          Gestion
+                      <DropdownMenuContent
+                        align="end"
+                        className="w-56 rounded-none border-2 border-slate-950 p-0 shadow-2xl"
+                      >
+                        <DropdownMenuLabel className="text-[9px] uppercase font-black text-slate-400 p-3 bg-slate-50 border-b">
+                          Control Panel
                         </DropdownMenuLabel>
-                        <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => setEditingId(item.id)}
-                          className="text-xs font-bold uppercase cursor-pointer"
+                          className="h-11 text-[10px] font-black uppercase rounded-none focus:bg-indigo-600 focus:text-white cursor-pointer transition-none"
                         >
-                          <Edit2 className="w-3.5 h-3.5 mr-2" /> Modifier prix
+                          <Edit2 className="w-4 h-4 mr-3" /> Éditer Tarif
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-xs font-bold uppercase text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer">
-                          <Trash2 className="w-3.5 h-3.5 mr-2" /> Supprimer
+                        <DropdownMenuSeparator className="m-0" />
+                        <DropdownMenuItem className="h-11 text-[10px] font-black uppercase text-rose-600 focus:bg-rose-600 focus:text-white rounded-none cursor-pointer transition-none">
+                          <Trash2 className="w-4 h-4 mr-3" /> Écarter l'actif
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

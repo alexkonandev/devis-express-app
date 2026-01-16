@@ -2,50 +2,55 @@
 
 import { cn } from "@/lib/utils";
 import {
-  Check,
   FileText,
   Send,
   XCircle,
   CreditCard,
   HelpCircle,
+  ArrowUpRight,
 } from "lucide-react";
-import { QuoteStatus } from "@/types/dashboard"; // ✅ Import local (Safe pour le client)
+import { QuoteStatus } from "@/types/dashboard";
 import { ElementType } from "react";
 
+/**
+ * @description StatusBadge v3.0 - Industrial Blueprint
+ * Règle #2 : rounded-none (Obligatoire)
+ * Règle #1 : Pure Tailwind (Indigo-600, Slate-950, Rose-600)
+ */
 export function StatusBadge({ status }: { status: QuoteStatus }) {
   const config: Record<
     QuoteStatus,
     { style: string; label: string; icon: ElementType }
   > = {
     DRAFT: {
-      style: "bg-zinc-100 text-zinc-600 border-zinc-200",
+      style: "bg-slate-50 text-slate-500 border-slate-200",
       label: "Brouillon",
       icon: FileText,
     },
     SENT: {
-      style: "bg-blue-50 text-blue-700 border-blue-200",
-      label: "Envoyé",
+      style: "bg-white text-slate-950 border-slate-950",
+      label: "En attente",
       icon: Send,
     },
     ACCEPTED: {
-      style: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      style: "bg-indigo-50 text-indigo-600 border-indigo-200",
       label: "Signé",
-      icon: Check,
+      icon: ArrowUpRight,
     },
     REJECTED: {
-      style: "bg-red-50 text-red-700 border-red-200",
+      style: "bg-rose-50 text-rose-600 border-rose-200",
       label: "Refusé",
       icon: XCircle,
     },
     PAID: {
-      style: "bg-indigo-50 text-indigo-700 border-indigo-200",
+      style: "bg-slate-950 text-white border-transparent shadow-none",
       label: "Payé",
       icon: CreditCard,
     },
   };
 
   const active = config[status] || {
-    style: "bg-zinc-100 text-zinc-400 border-zinc-200",
+    style: "bg-slate-100 text-slate-400 border-slate-200",
     label: "Inconnu",
     icon: HelpCircle,
   };
@@ -53,7 +58,7 @@ export function StatusBadge({ status }: { status: QuoteStatus }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tight border shadow-sm",
+        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-none text-[9px] font-black uppercase tracking-[0.15em] border transition-all duration-200 font-sans",
         active.style
       )}
     >

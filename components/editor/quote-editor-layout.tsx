@@ -4,10 +4,13 @@ import React, { useRef, useState, MouseEvent } from "react";
 import { cn } from "@/lib/utils";
 
 interface QuoteEditorLayoutProps {
-  leftSidebar?: React.ReactNode; // Devenu optionnel pour le mode Preview
-  rightSidebar?: React.ReactNode; // Devenu optionnel pour le mode Preview
+  leftSidebar?: React.ReactNode;
+  rightSidebar?: React.ReactNode;
   bottomToolbar: React.ReactNode;
   children: React.ReactNode;
+  // Ajout des props de contrôle pour éviter la double enveloppe
+  viewMode: "studio" | "preview";
+  zoom: number;
 }
 
 export const QuoteEditorLayout = ({
@@ -15,23 +18,21 @@ export const QuoteEditorLayout = ({
   rightSidebar,
   bottomToolbar,
   children,
+  viewMode,
+  zoom,
 }: QuoteEditorLayoutProps) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [scrollPos, setScrollPos] = useState({ left: 0, top: 0 });
 
-  // Détection pour l'animation
-  const showLeft = !!leftSidebar;
-  const showRight = !!rightSidebar;
-
   const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
-    if (!scrollContainerRef.current) return;
+    if (e.target !== e.currentTarget) return;
     setIsDragging(true);
     setStartPos({ x: e.pageX, y: e.pageY });
     setScrollPos({
-      left: scrollContainerRef.current.scrollLeft,
-      top: scrollContainerRef.current.scrollTop,
+      left: scrollContainerRef.current?.scrollLeft || 0,
+      top: scrollContainerRef.current?.scrollTop || 0,
     });
   };
 
@@ -44,59 +45,62 @@ export const QuoteEditorLayout = ({
     scrollContainerRef.current.scrollTop = scrollPos.top - y;
   };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
   return (
-    <div className="flex h-full w-full bg-[#F5F5F5] overflow-hidden font-sans text-xs antialiased select-none">
-      {/* --- GAUCHE : ANIMATION TIROIR --- */}
+    <div className="flex h-full w-full bg-white overflow-hidden font-sans text-[13px] antialiased select-none">
+      {/* SIDEBAR GAUCHE */}
       <aside
         className={cn(
-          "bg-white border-r border-zinc-200 flex flex-col z-20 overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
-          showLeft
-            ? "w-75 opacity-100 translate-x-0"
-            : "w-0 opacity-0 -translate-x-10 border-none"
+          "bg-white border-r border-slate-200 z-20 transition-all duration-300 overflow-hidden",
+          leftSidebar ? "w-[300px]" : "w-0"
         )}
       >
-        {/* Wrapper fixe pour éviter l'écrasement du contenu pendant l'anim */}
-        <div className="w-75 h-full flex flex-col">{leftSidebar}</div>
+        <div className="w-[300px] h-full">{leftSidebar}</div>
       </aside>
 
-      {/* --- CENTRE : EXPANSION AUTOMATIQUE (flex-1) --- */}
-      <div className="flex-1 relative flex flex-col min-w-0 transition-all duration-300">
+      {/* CANVAS CENTRAL */}
+      <main className="flex-1 relative flex flex-col min-w-0">
         <div
           ref={scrollContainerRef}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
+          onMouseUp={() => setIsDragging(false)}
+          onMouseLeave={() => setIsDragging(false)}
           className={cn(
-            "flex-1 overflow-auto bg-[#F5F5F5] flex justify-center items-start outline-none mt-2",
+            "flex-1 overflow-auto flex justify-center items-start pt-12 pb-32 transition-colors duration-300",
             isDragging ? "cursor-grabbing" : "cursor-grab",
-            // Scrollbar styling conservé
-            "scrollbar-thin scrollbar-track-transparent scrollbar-thumb-transparent hover:scrollbar-thumb-zinc-300 scrollbar-thumb-rounded-full [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-zinc-300 transition-colors"
+            viewMode === "preview" ? "bg-slate-200" : "bg-slate-50",
+            "scrollbar-none"
           )}
         >
-          {children}
+          {/* L'UNIQUE CONTENEUR DE LA FEUILLE A4 */}
+          <div
+            id="printable-content"
+            className={cn(
+              "bg-white border border-slate-200 shadow-sm transition-transform duration-200 origin-top",
+              viewMode === "preview" && "shadow-xl border-none"
+            )}
+            style={{
+              transform: viewMode === "studio" ? `scale(${zoom})` : undefined,
+            }}
+          >
+            {children}
+          </div>
         </div>
 
-        {/* Toolbar reste au centre absolu du conteneur central */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto">
+        {/* TOOLBAR */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50">
           {bottomToolbar}
         </div>
-      </div>
+      </main>
 
-      {/* --- DROITE : ANIMATION TIROIR --- */}
+      {/* SIDEBAR DROITE */}
       <aside
         className={cn(
-          "bg-white border-l border-zinc-200 flex flex-col z-20 overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
-          showRight
-            ? "w-82.5 opacity-100 translate-x-0"
-            : "w-0 opacity-0 translate-x-10 border-none"
+          "bg-white border-l border-slate-200 z-20 transition-all duration-300 overflow-hidden",
+          rightSidebar ? "w-[340px]" : "w-0"
         )}
       >
-        <div className="w-82.5 h-full flex flex-col">{rightSidebar}</div>
+        <div className="w-[340px] h-full">{rightSidebar}</div>
       </aside>
     </div>
   );

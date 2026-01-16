@@ -51,3 +51,51 @@ export async function upsertClient(data: {
     return { success: false, error: "Erreur technique" };
   }
 }
+
+export async function deleteClient(clientId: string) {
+  try {
+    const authId = await getClerkUserId();
+    if (!authId) return { success: false, error: "Non autorisé" };
+
+    // Suppression sécurisée par l'ID du client ET l'ID de l'utilisateur
+    await db.client.delete({
+      where: {
+        id: clientId,
+        userId: authId,
+      },
+    });
+
+    revalidatePath("/dashboard/clients");
+    return { success: true };
+  } catch (err) {
+    console.error("[DELETE_CLIENT_ERROR]:", err);
+    return {
+      success: false,
+      error: "Erreur lors de la suppression de l'actif",
+    };
+  }
+}
+
+/**
+ * @action deleteManyClients
+ * @description Suppression en lot pour l'efficacité opérationnelle (Batch Delete).
+ */
+export async function deleteManyClients(clientIds: string[]) {
+  try {
+    const authId = await getClerkUserId();
+    if (!authId) return { success: false, error: "Non autorisé" };
+
+    const result = await db.client.deleteMany({
+      where: {
+        id: { in: clientIds },
+        userId: authId,
+      },
+    });
+
+    revalidatePath("/dashboard/clients");
+    return { success: true, count: result.count };
+  } catch (err) {
+    console.error("[DELETE_MANY_CLIENTS_ERROR]:", err);
+    return { success: false, error: "Erreur lors de la suppression groupée" };
+  }
+}

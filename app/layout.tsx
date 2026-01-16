@@ -35,7 +35,7 @@ export default function RootLayout({
     <ClerkProvider localization={frFR}>
       <html lang="fr" className={`${figtree.variable} ${jetbrains.variable}`}>
         <body>{children}
-          <Toaster />
+          <Toaster position="top-center"/>
         </body>
       </html>
     </ClerkProvider>
