@@ -1,7 +1,5 @@
 "use client";
-
-import { Progress } from "@/components/ui/progress";
-import { Zap, Infinity, Activity } from "lucide-react";
+import { Zap,Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface UsageMetricsProps {

@@ -13,7 +13,6 @@ import {
   FileSpreadsheet,
   MapPin,
   Building2,
-  ExternalLink,
   Check,
   AlertTriangle,
 } from "lucide-react";

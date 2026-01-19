@@ -51,7 +51,7 @@ export function SubscriptionCard({ isPro }: SubscriptionCardProps) {
     try {
       // Simulation logique business - Prêt pour intégration Server Action
       await new Promise((resolve) => setTimeout(resolve, 1500));
-    } catch (err: unknown) {
+    } catch {
       notify.error("ÉCHEC DE CONNEXION GATEWAY");
     } finally {
       setLoading(false);
@@ -63,8 +63,8 @@ export function SubscriptionCard({ isPro }: SubscriptionCardProps) {
       className={cn(
         "relative rounded-none border transition-none h-full flex flex-col",
         isPro
-          ? "border-emerald-500 bg-emerald-50/10 shadow-none"
-          : "border-slate-400 bg-white shadow-[8px_8px_0px_rgba(2,6,23,1)]"
+          ? "border-emerald-300 bg-emerald-50/10 shadow-none"
+          : "border-slate-300 bg-white shadow-[8px_8px_0px_rgba(2,6,23,1)]"
       )}
     >
       {/* BADGE D'ÉTAT */}
@@ -80,13 +80,13 @@ export function SubscriptionCard({ isPro }: SubscriptionCardProps) {
       <div className="p-8 flex-1 flex flex-col justify-between min-h-0 overflow-hidden">
         {/* HEADER */}
         <div className="flex flex-col gap-1.5 shrink-0">
-          <span className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-600">
+          <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-indigo-600">
             {isPro ? "Infrastructure Déployée" : "Optimisation de Flux"}
           </span>
           <h2 className="text-2xl font-black uppercase tracking-tighter text-slate-950">
             {isPro ? "Empire / Pro Edition" : "Standard / Baseline"}
           </h2>
-          <p className="text-[12px] text-slate-400 font-bold uppercase tracking-tight max-w-sm">
+          <p className="text-[12px] text-slate-400 font-semibold uppercase tracking-tight max-w-sm">
             {isPro
               ? "Votre environnement est configuré pour un volume illimité."
               : "Configuration de base. Débloquez les outils d'élite pour scaler."}
@@ -123,7 +123,7 @@ export function SubscriptionCard({ isPro }: SubscriptionCardProps) {
             >
               <div className="flex items-center gap-2 mb-1">
                 <spec.icon className="w-3.5 h-3.5 text-slate-400" />
-                <span className="text-[9px] font-black uppercase text-slate-400 tracking-[0.2em]">
+                <span className="text-[11px] font-bold uppercase text-slate-400 tracking-[0.2em]">
                   {spec.label}
                 </span>
               </div>

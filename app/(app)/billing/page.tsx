@@ -59,7 +59,7 @@ export default async function BillingPage() {
               <div className="flex items-center gap-2 mb-3">
                 <Terminal className="w-3.5 h-3.5 text-slate-400" />
                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
-                  Statistiques d'usage
+                  Statistiques d&apos;usage
                 </span>
               </div>
               <div className="flex-1 bg-white border border-slate-200 shadow-sm overflow-hidden">

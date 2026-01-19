@@ -13,16 +13,10 @@ export const metadata: Metadata = {
 export default async function CatalogPage() {
   const userId = await getClerkUserId();
 
-  // Stratégie de sécurité : redirection immédiate si pas de session
   if (!userId) {
     redirect("/sign-in");
   }
 
-  /**
-   * RÉCUPÉRATION DES DONNÉES (Server Component)
-   * On fetch les offres du catalogue directement ici.
-   * On passe les données au composant client pour un rendu instantané.
-   */
   const initialItems = await getCatalogOffers();
 
   return (

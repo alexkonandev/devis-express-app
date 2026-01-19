@@ -8,7 +8,6 @@ interface QuoteEditorLayoutProps {
   rightSidebar?: React.ReactNode;
   bottomToolbar: React.ReactNode;
   children: React.ReactNode;
-  // Ajout des props de contrôle pour éviter la double enveloppe
   viewMode: "studio" | "preview";
   zoom: number;
 }
@@ -27,6 +26,7 @@ export const QuoteEditorLayout = ({
   const [scrollPos, setScrollPos] = useState({ left: 0, top: 0 });
 
   const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+    // Permet de cliquer sur le fond pour drag, mais pas sur la feuille elle-même
     if (e.target !== e.currentTarget) return;
     setIsDragging(true);
     setStartPos({ x: e.pageX, y: e.pageY });
@@ -47,18 +47,18 @@ export const QuoteEditorLayout = ({
 
   return (
     <div className="flex h-full w-full bg-white overflow-hidden font-sans text-[13px] antialiased select-none">
-      {/* SIDEBAR GAUCHE */}
+      {/* SIDEBAR GAUCHE (CLIENT + ITEMS + CATALOGUE) : 320px */}
       <aside
         className={cn(
-          "bg-white border-r border-slate-200 z-20 transition-all duration-300 overflow-hidden",
-          leftSidebar ? "w-[300px]" : "w-0"
+          "bg-white border-r border-slate-200 z-20 transition-all duration-300 overflow-hidden shrink-0",
+          leftSidebar ? "w-[320px]" : "w-0"
         )}
       >
-        <div className="w-[300px] h-full">{leftSidebar}</div>
+        <div className="h-full w-[320px]">{leftSidebar}</div>
       </aside>
 
       {/* CANVAS CENTRAL */}
-      <main className="flex-1 relative flex flex-col min-w-0">
+      <main className="flex-1 relative flex flex-col min-w-0 bg-slate-50">
         <div
           ref={scrollContainerRef}
           onMouseDown={handleMouseDown}
@@ -66,18 +66,17 @@ export const QuoteEditorLayout = ({
           onMouseUp={() => setIsDragging(false)}
           onMouseLeave={() => setIsDragging(false)}
           className={cn(
-            "flex-1 overflow-auto flex justify-center items-start pt-12 pb-32 transition-colors duration-300",
+            "flex-1 overflow-auto flex justify-center items-start pt-12 pb-32 transition-colors duration-300 scrollbar-none",
             isDragging ? "cursor-grabbing" : "cursor-grab",
-            viewMode === "preview" ? "bg-slate-200" : "bg-slate-50",
-            "scrollbar-none"
+            viewMode === "preview" ? "bg-slate-200" : "bg-slate-50"
           )}
         >
-          {/* L'UNIQUE CONTENEUR DE LA FEUILLE A4 */}
+          {/* FEUILLE A4 UNIQUE */}
           <div
             id="printable-content"
             className={cn(
               "bg-white border border-slate-200 shadow-sm transition-transform duration-200 origin-top",
-              viewMode === "preview" && "shadow-xl border-none"
+              viewMode === "preview" && "shadow-2xl border-none scale-100"
             )}
             style={{
               transform: viewMode === "studio" ? `scale(${zoom})` : undefined,
@@ -87,20 +86,20 @@ export const QuoteEditorLayout = ({
           </div>
         </div>
 
-        {/* TOOLBAR */}
+        {/* TOOLBAR FLOTTANTE */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50">
           {bottomToolbar}
         </div>
       </main>
 
-      {/* SIDEBAR DROITE */}
+      {/* SIDEBAR DROITE (STYLE + PROFIT) : 280px */}
       <aside
         className={cn(
-          "bg-white border-l border-slate-200 z-20 transition-all duration-300 overflow-hidden",
-          rightSidebar ? "w-[340px]" : "w-0"
+          "bg-white border-l border-slate-200 z-20 transition-all duration-300 overflow-hidden shrink-0",
+          rightSidebar ? "w-[280px]" : "w-0"
         )}
       >
-        <div className="w-[340px] h-full">{rightSidebar}</div>
+        <div className="h-full w-[280px]">{rightSidebar}</div>
       </aside>
     </div>
   );

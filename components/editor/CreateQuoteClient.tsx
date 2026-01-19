@@ -48,10 +48,10 @@ export default function CreateQuoteClient({
 }: CreateQuoteClientProps) {
   const router = useRouter();
 
-  // --- STATE ALIGNÉ (Phone supprimé pour matcher EditorActiveQuote) ---
+  // --- STATE ---
   const [activeQuote, setActiveQuote] = useState<EditorActiveQuote>(
     initialQuoteData || {
-      title: "Nouveau Devis",
+      title: "PROJET_NEW_INSTANCE",
       company: {
         name: userSettings.companyName,
         email: userSettings.companyEmail,
@@ -59,7 +59,6 @@ export default function CreateQuoteClient({
         siret: userSettings.companySiret,
         website: userSettings.companyWebsite,
       },
-      // ✅ Client aligné : name, email, address, siret uniquement
       client: { name: "", email: "", address: "", siret: "" },
       quote: {
         number: `${userSettings.quotePrefix}${String(
@@ -88,23 +87,6 @@ export default function CreateQuoteClient({
   const [zoom, setZoom] = useState<number>(0.85);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const printRef = useRef<HTMLDivElement>(null);
-
-  // --- AUTO-INJECTION D'OFFRE ---
-  useEffect(() => {
-    if (preSelectedOffer && activeQuote.items.length === 0) {
-      const newItem: EditorQuoteItem = {
-        title: preSelectedOffer.title,
-        subtitle: preSelectedOffer.subtitle || "",
-        quantity: 1,
-        unitPriceEuros: preSelectedOffer.unitPriceEuros,
-      };
-
-      setActiveQuote((prev) => ({
-        ...prev,
-        items: [newItem],
-      }));
-    }
-  }, [preSelectedOffer, activeQuote.items.length]);
 
   // --- THEME LOGIC ---
   const activeThemeObject = useMemo(() => {
@@ -141,30 +123,39 @@ export default function CreateQuoteClient({
         groupData !== null &&
         !Array.isArray(groupData)
       ) {
-        return {
-          ...prev,
-          [group]: { ...groupData, [field]: value },
-        };
+        return { ...prev, [group]: { ...groupData, [field]: value } };
       }
       return prev;
     });
   };
 
-  const handleAddItem = (item: Partial<EditorQuoteItem> = {}) => {
-    setActiveQuote((prev) => ({
-      ...prev,
-      items: [
-        ...prev.items,
-        {
-          title: item.title || "Nouvelle Prestation",
-          subtitle: item.subtitle || "",
-          quantity: item.quantity || 1,
-          unitPriceEuros: item.unitPriceEuros || 0,
-        },
-      ],
-    }));
-  };
-
+  const handleAddItem = React.useCallback(
+    (item: Partial<EditorQuoteItem> = {}) => {
+      setActiveQuote((prev) => ({
+        ...prev,
+        items: [
+          ...prev.items,
+          {
+            title: item.title || "Nouvelle Ligne",
+            subtitle: item.subtitle || "",
+            quantity: item.quantity || 1,
+            unitPriceEuros: item.unitPriceEuros || 0,
+          },
+        ],
+      }));
+    },
+    []
+  );
+  
+  useEffect(() => {
+    if (preSelectedOffer && activeQuote.items.length === 0) {
+      handleAddItem({
+        title: preSelectedOffer.title,
+        unitPriceEuros: preSelectedOffer.unitPriceEuros,
+        quantity: 1,
+      });
+    }
+  }, [preSelectedOffer, activeQuote.items.length, handleAddItem]); // ✅ ESLint est satisfait
   const handleUpdateItem = (
     index: number,
     field: keyof EditorQuoteItem,
@@ -187,34 +178,23 @@ export default function CreateQuoteClient({
     }));
   };
 
-  const handleMoveItem = (fromIndex: number, toIndex: number) => {
-    setActiveQuote((prev) => {
-      const newItems = [...prev.items];
-      const [movedItem] = newItems.splice(fromIndex, 1);
-      newItems.splice(toIndex, 0, movedItem);
-      return { ...prev, items: newItems };
-    });
-  };
-
   const handleSaveQuote = async () => {
     if (!activeQuote.client.name) {
       toast.error("Veuillez renseigner un nom de client.");
       return;
     }
-
     setIsSaving(true);
     try {
-      // ✅ Désormais, les types match parfaitement (phone absent des deux côtés)
       const result = await upsertQuoteAction(activeQuote, dbQuoteId);
       if (result.success && result.data) {
         setDbQuoteId(result.data.id);
-        toast.success("Devis enregistré !");
+        toast.success("Sync stable : Devis enregistré");
         router.refresh();
       } else {
-        toast.error(result.error || "Une erreur est survenue.");
+        toast.error(result.error || "Erreur de synchronisation.");
       }
     } catch {
-      toast.error("Échec de la connexion au serveur.");
+      toast.error("Échec critique de la connexion.");
     } finally {
       setIsSaving(false);
     }
@@ -222,7 +202,6 @@ export default function CreateQuoteClient({
 
   return (
     <QuoteEditorLayout
-      // ✅ On passe les propriétés obligatoires au Layout
       viewMode={viewMode}
       zoom={zoom}
       leftSidebar={
@@ -231,6 +210,10 @@ export default function CreateQuoteClient({
             activeQuote={activeQuote}
             updateField={handleUpdateField}
             initialClients={initialClients}
+            catalogItems={initialCatalog}
+            addItem={handleAddItem}
+            updateItem={handleUpdateItem}
+            removeItem={handleRemoveItem}
           />
         )
       }
@@ -241,11 +224,6 @@ export default function CreateQuoteClient({
             availableThemes={initialThemes}
             currentTheme={activeThemeId}
             setTheme={setActiveThemeId}
-            catalogItems={initialCatalog}
-            addItem={handleAddItem}
-            updateItem={handleUpdateItem}
-            removeItem={handleRemoveItem}
-            moveItem={handleMoveItem}
             totals={totals}
           />
         )
@@ -265,9 +243,6 @@ export default function CreateQuoteClient({
         />
       }
     >
-      {/* L'enveloppe est maintenant UNIQUE. 
-      Le Layout gère l'ID #printable-content, l'ombre et le zoom.
-    */}
       <QuoteVisualizer
         data={activeQuote}
         theme={activeThemeObject}

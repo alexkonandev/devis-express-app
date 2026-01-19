@@ -206,7 +206,7 @@ export default function UnifiedCatalogView({
                       </span>
                       {item.subtitle && (
                         <span className="text-[10px] text-slate-400 font-bold uppercase italic mt-1 tracking-tighter">
-                          // {item.subtitle}
+                          {"// "} {item.subtitle}
                         </span>
                       )}
                     </div>
@@ -236,9 +236,10 @@ export default function UnifiedCatalogView({
                       </div>
                     ) : (
                       <span
-                        onClick={() =>
-                          setTab("personal") && setEditingId(item.id)
-                        } // Focus prix uniquement en mode modifiable
+                        onClick={() => {
+                          setTab("personal");
+                          setEditingId(item.id);
+                        }}
                         className="font-mono text-[14px] font-black text-slate-950 cursor-pointer hover:bg-slate-950 hover:text-white px-3 py-1.5 transition-none tabular-nums"
                       >
                         {new Intl.NumberFormat("fr-FR", {
@@ -275,7 +276,8 @@ export default function UnifiedCatalogView({
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="m-0" />
                         <DropdownMenuItem className="h-11 text-[10px] font-black uppercase text-rose-600 focus:bg-rose-600 focus:text-white rounded-none cursor-pointer transition-none">
-                          <Trash2 className="w-4 h-4 mr-3" /> Écarter l'actif
+                          <Trash2 className="w-4 h-4 mr-3" /> Écarter
+                          l&apos;actif
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

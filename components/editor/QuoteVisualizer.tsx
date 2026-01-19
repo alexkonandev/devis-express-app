@@ -38,15 +38,20 @@ export const QuoteVisualizer = ({
     );
   }
 
-  // Fallback de thème typé
-  const effectiveTheme: EditorTheme = theme || {
+  // Solution 1 : Le Cast propre (Direct et efficace)
+  const effectiveTheme = (theme || {
     id: "default-fallback",
     name: "Design Standard",
     baseLayout: "swiss",
     color: "#4f46e5",
     config: {},
-  };
-
+    // On ajoute les champs manquants avec des valeurs par défaut pour satisfaire le type
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isPremium: false,
+    description: null,
+    isSystem: true,
+  }) as EditorTheme;
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-100 overflow-hidden relative">
       {/* 2. BARRE D'ÉTAT DU VISUALISEUR (Metadata Look) */}

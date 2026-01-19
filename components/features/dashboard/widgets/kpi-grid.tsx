@@ -4,13 +4,11 @@ import { AdvancedDashboardData } from "@/types/dashboard";
 import {
   TrendingUp,
   Clock,
-  CheckCircle,
   Target,
   ArrowUpRight,
 } from "lucide-react";
 import { KPICard } from "../kpi-card";
 import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 
 interface KpiGridProps {
   data: AdvancedDashboardData;

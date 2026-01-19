@@ -2,20 +2,12 @@
 
 import Link from "next/link";
 import {
- 
   CheckIcon,
-  LightningIcon,
-  FileTextIcon,
-  DeviceMobileIcon,
-  ShieldCheckIcon,
-
   LayoutIcon,
-
   ArrowUpRightIcon,
 } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Logo } from "./ui/logo";
 
 interface LandingPageViewProps {
@@ -23,9 +15,7 @@ interface LandingPageViewProps {
 }
 
 export default function LandingPageView({ userId }: LandingPageViewProps) {
-  const mainActionLink = userId ? "/dashboard" : "/sign-up";
-
-
+  const mainActionLink = userId ? "/quotes/editor" : "/sign-up";
 
   return (
     <main className="min-h-screen bg-white text-slate-950 font-sans selection:bg-indigo-600 selection:text-white overflow-x-hidden">
@@ -44,7 +34,7 @@ export default function LandingPageView({ userId }: LandingPageViewProps) {
               >
                 <Link href="/dashboard" className="flex items-center gap-2">
                   <LayoutIcon size={16} weight="bold" />
-                  Terminal_Dashboard
+                  Mon Espace
                 </Link>
               </Button>
             ) : (
@@ -58,9 +48,9 @@ export default function LandingPageView({ userId }: LandingPageViewProps) {
                 </Button>
                 <Button
                   asChild
-                  className="bg-indigo-600 text-white rounded-none h-9 text-[11px] font-black uppercase tracking-widest px-6"
+                  className="bg-indigo-600 text-white rounded-none h-9 text-[11px] font-black uppercase tracking-widest px-6 shadow-[4px_4px_0px_rgba(79,70,229,0.2)]"
                 >
-                  <Link href="/sign-up">Start_Engine</Link>
+                  <Link href="/sign-up">S&apos;inscrire</Link>
                 </Button>
               </>
             )}
@@ -72,27 +62,25 @@ export default function LandingPageView({ userId }: LandingPageViewProps) {
       {/* --- 2. SECTION HÉRO : IMPACT MAXIMAL --- */}
       <section className="py-32 px-6 max-w-[1400px] mx-auto flex flex-col items-center text-center">
         <div className="max-w-4xl space-y-10">
-        
-
-          <h1 className="text-6xl md:text-[120px] font-black tracking-tighter leading-[0.8] uppercase">
+          <h1 className="text-6xl md:text-8xl font-black tracking-tighter leading-[0.9] uppercase">
             Facturation <br />
-            <span className="text-slate-200">Sans Compromis.</span>
+            <span className="text-slate-300">Haute Précision.</span>
           </h1>
 
           <div className="flex flex-col items-center gap-8">
             <p className="text-xl md:text-2xl text-slate-500 font-medium leading-tight max-w-2xl uppercase italic">
-              L'outil de contrôle conçu pour l'élite des entrepreneurs
-              ivoiriens. Précision chirurgicale. Conformité totale. Profit
-              optimisé.
+              La plateforme de gestion conçue pour les entrepreneurs ivoiriens.
+              Éliminez les erreurs, accélérez vos paiements, maximisez vos
+              profits.
             </p>
 
             <div className="flex flex-wrap justify-center gap-6 pt-4">
               <Button
                 asChild
-                className="h-16 px-12 text-[13px] font-black uppercase tracking-widest bg-slate-950 text-white rounded-none shadow-[6px_6px_0px_#4f46e5] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
+                className="h-16 px-12 text-[14px] font-black uppercase tracking-widest bg-slate-950 text-white rounded-none shadow-[6px_6px_0px_#4f46e5] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
               >
                 <Link href={mainActionLink}>
-                  {userId ? "Accéder au Terminal" : "Déployer le Système"}
+                  {userId ? "Créer un devis" : "Démarrer"}
                 </Link>
               </Button>
             </div>
@@ -100,15 +88,15 @@ export default function LandingPageView({ userId }: LandingPageViewProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 pt-20 border-t border-slate-100">
             {[
-              { label: "LATENCE_ZÉRO", desc: "Calculs instantanés" },
-              { label: "STANDARD_DGI", desc: "100% Conforme CI" },
-              { label: "FLUX_SÉCURISÉ", desc: "Chiffrement AES-256" },
+              { label: "RAPIDITÉ TOTALE", desc: "Devis prêts en 1 minute" },
+              { label: "CONFORME DGI", desc: "Respect des normes CI" },
+              { label: "DONNÉES SÉCURISÉES", desc: "Protection bancaire" },
             ].map((item) => (
               <div key={item.label} className="space-y-2">
-                <div className="text-indigo-600 text-[11px] font-black tracking-widest">
+                <div className="text-indigo-600 text-[12px] font-bold tracking-[0.1em]">
                   {item.label}
                 </div>
-                <div className="text-slate-400 text-[10px] font-bold uppercase tracking-tight">
+                <div className="text-slate-400 text-[11px] font-medium uppercase tracking-tight">
                   {item.desc}
                 </div>
               </div>
@@ -119,69 +107,58 @@ export default function LandingPageView({ userId }: LandingPageViewProps) {
 
       {/* --- 3. FONCTIONNALITÉS : GRID SYSTEM --- */}
       <section className="py-24 px-6 max-w-[1400px] mx-auto border-t border-slate-100">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-px bg-slate-200 border border-slate-200">
-          <div className="md:col-span-8 bg-white p-12">
-            <LightningIcon
-              size={32}
-              weight="fill"
-              className="text-indigo-600 mb-8"
-            />
-            <h2 className="text-3xl font-black uppercase tracking-tighter mb-6">
-              Moteur de calcul temps réel
-            </h2>
-            <p className="text-slate-500 font-medium text-lg leading-tight uppercase max-w-xl">
-              Plus qu'un éditeur, une console de contrôle. Saisissez vos items,
-              le système recalcule la TVA et les marges instantanément. Zéro
-              erreur, 100% de rentabilité.
-            </p>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-px bg-slate-200 border border-slate-200 shadow-sm">
+          {/* BLOC 1 : MOTEUR (8/12 - HAUTEUR FIXE) */}
+          <div className="md:col-span-8 bg-white p-12 md:p-20 flex flex-col justify-top h-[300px]">
+            <div>
+              <h2 className="text-3xl font-black uppercase tracking-tighter mb-4 leading-[0.85]">
+                Moteur de calcul <br />
+                temps réel
+              </h2>
+              <p className="text-slate-500 font-medium text-lg leading-tight uppercase max-w-xl">
+                Plus qu&apos;un éditeur, une console de contrôle. Saisissez vos
+                items, le système recalcule la TVA et les marges instantanément.
+                Zéro erreur, 100% de rentabilité.
+              </p>
+            </div>
           </div>
 
-          <div className="md:col-span-4 bg-slate-950 p-12 text-white">
-            <DeviceMobileIcon
-              size={32}
-              weight="bold"
-              className="text-indigo-500 mb-8"
-            />
-            <h3 className="text-xl font-black uppercase tracking-tight mb-4 text-white">
-              Mobilité_Absolue
-            </h3>
-            <p className="text-slate-400 text-sm font-medium uppercase leading-tight">
-              Facturez depuis un chantier, un café ou un avion. L'interface
-              s'adapte à la vitesse de votre business.
-            </p>
+          {/* BLOC 2 : MOBILITÉ (4/12 - HAUTEUR FIXE) */}
+          <div className="md:col-span-4 bg-slate-950 p-12 md:p-20 text-white flex flex-col justify-top h-[300px]">
+            <div>
+              <h3 className="text-2xl font-black uppercase tracking-tight mb-4">
+                Mobilité Absolue
+              </h3>
+              <p className="text-slate-400 text-sm font-medium uppercase leading-relaxed italic">
+                Facturez depuis un chantier, un café ou un avion.
+                L&apos;interface s&apos;adapte à la vitesse de votre business.
+              </p>
+            </div>
           </div>
 
-          <div className="md:col-span-4 bg-white p-12">
-            <ShieldCheckIcon
-              size={32}
-              weight="bold"
-              className="text-slate-900 mb-8"
-            />
-            <h3 className="text-xl font-black uppercase tracking-tight mb-4">
-              Sécurité_Chiffrée
-            </h3>
-            <p className="text-slate-500 text-sm font-medium uppercase">
-              Chiffrement de bout en bout sur serveurs sécurisés. Votre
-              patrimoine client est protégé.
-            </p>
+          {/* BLOC 3 : SÉCURITÉ (4/12 - HAUTEUR FIXE) */}
+          <div className="md:col-span-4 bg-slate-100 p-12 md:p-20 flex flex-col justify-top h-[250px]">
+            <div>
+              <h3 className="text-2xl font-black uppercase tracking-tight mb-4">
+                Sécurité Chiffrée
+              </h3>
+              <p className="text-slate-500 text-sm font-medium uppercase leading-relaxed">
+                Chiffrement de bout en bout sur serveurs sécurisés. Votre
+                patrimoine client est protégé.
+              </p>
+            </div>
           </div>
 
-          <div className="md:col-span-8 bg-slate-50 p-12">
-            <div className="flex gap-10">
-              <div className="flex-1">
-                <h3 className="text-xl font-black uppercase tracking-tight mb-4">
-                  Architecture_Pro
-                </h3>
-                <p className="text-slate-500 text-sm font-medium uppercase">
-                  Générez des PDF qui forcent le respect. Une mise en page
-                  étudiée pour accélérer la signature.
-                </p>
-              </div>
-              <FileTextIcon
-                size={48}
-                weight="thin"
-                className="text-slate-200"
-              />
+          {/* BLOC 4 : ARCHITECTURE (8/12 - HAUTEUR FIXE) */}
+          <div className="md:col-span-8 bg-[#faf9f6] p-12 md:p-20 flex flex-col justify-top h-[250px]">
+            <div>
+              <h3 className="text-2xl font-black uppercase tracking-tight mb-4">
+                Architecture Pro
+              </h3>
+              <p className="text-slate-600 text-[15px] font-medium uppercase leading-tight max-w-md">
+                Générez des PDF qui forcent le respect. Une mise en page étudiée
+                pour accélérer la signature.
+              </p>
             </div>
           </div>
         </div>
@@ -201,7 +178,7 @@ export default function LandingPageView({ userId }: LandingPageViewProps) {
         <div className="max-w-[1000px] mx-auto relative z-10">
           <div className="text-center mb-20">
             <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter mb-4">
-              Tarification_Directe
+              Tarifs Clairs
             </h2>
             <p className="text-indigo-400 font-mono text-sm tracking-widest uppercase font-bold">
               Zéro frais cachés. Uniquement de la performance.
@@ -209,13 +186,16 @@ export default function LandingPageView({ userId }: LandingPageViewProps) {
           </div>
 
           <div className="grid md:grid-cols-2 gap-12">
-            {/* Free */}
-            <div className="border border-slate-800 p-10 flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 mb-8">
-                ENTRY_LEVEL
+            <div className="border border-slate-900 bg-slate-950/50 p-10 flex flex-col h-full opacity-60 hover:opacity-100 transition-opacity duration-300">
+              <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-slate-600 mb-8">
+                Accès Gratuit
               </span>
-              <h3 className="text-2xl font-black uppercase mb-2">Découverte</h3>
-              <div className="text-5xl font-black font-mono mb-10">0 FCFA</div>
+              <h3 className="text-2xl font-bold uppercase mb-2 text-slate-400">
+                Découverte
+              </h3>
+              <div className="text-5xl font-black font-mono mb-10 text-slate-500">
+                0 FCFA
+              </div>
               <ul className="space-y-4 mb-12 flex-1">
                 {[
                   "3 Documents / mois",
@@ -224,46 +204,45 @@ export default function LandingPageView({ userId }: LandingPageViewProps) {
                 ].map((f) => (
                   <li
                     key={f}
-                    className="flex items-center gap-3 text-[11px] font-bold uppercase text-slate-400"
+                    className="flex items-center gap-3 text-[11px] font-bold uppercase text-slate-600"
                   >
-                    <CheckIcon size={14} className="text-indigo-500" /> {f}
+                    <CheckIcon size={14} className="text-slate-700" /> {f}
                   </li>
                 ))}
               </ul>
               <Button
                 asChild
                 variant="outline"
-                className="rounded-none border-slate-700 text-white uppercase text-[11px] font-black h-12 hover:bg-white hover:text-slate-950 transition-none"
+                className="rounded-none border-slate-700 bg-transparent text-slate-500 uppercase text-[11px] font-black h-12 hover:bg-slate-800 hover:text-white hover:border-white transition-all"
               >
-                <Link href={mainActionLink}>Get_Started</Link>
+                <Link href={mainActionLink}>Démarrer</Link>
               </Button>
             </div>
 
-            {/* Pro */}
-            <div className="bg-indigo-600 p-10 flex flex-col relative shadow-[20px_20px_0px_rgba(79,70,229,0.1)]">
+            <div className="bg-indigo-600 p-10 flex flex-col relative shadow-[20px_20px_0px_rgba(79,70,229,0.1)] h-full">
               <div className="absolute -top-4 right-10 bg-white text-indigo-600 px-4 py-1 text-[10px] font-black uppercase tracking-widest">
-                RECOMMENDED
+                Conseillé
               </div>
-              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-200 mb-8">
-                POWER_USER
+              <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-indigo-100 mb-8">
+                Usage Illimité
               </span>
-              <h3 className="text-2xl font-black uppercase mb-2">
+              <h3 className="text-2xl font-bold uppercase mb-2 text-white">
                 Indépendant Pro
               </h3>
               <div className="text-5xl font-black font-mono mb-10 text-white">
                 5.000 FCFA{" "}
-                <span className="text-sm font-normal opacity-60">/MO</span>
+                <span className="text-sm font-normal opacity-99">/ MOIS</span>
               </div>
               <ul className="space-y-4 mb-12 flex-1 text-white">
                 {[
                   "Documents Illimités",
                   "Thèmes Blueprint Exclusifs",
                   "Signature Électronique",
-                  "Support Prioritaire 24/7",
+                  "Support Prioritaire",
                 ].map((f) => (
                   <li
                     key={f}
-                    className="flex items-center gap-3 text-[11px] font-black uppercase"
+                    className="flex items-center gap-3 text-[11px] font-bold uppercase"
                   >
                     <CheckIcon size={14} weight="bold" /> {f}
                   </li>
@@ -273,9 +252,8 @@ export default function LandingPageView({ userId }: LandingPageViewProps) {
                 asChild
                 className="bg-white text-indigo-600 rounded-none uppercase text-[11px] font-black h-14 hover:bg-slate-950 hover:text-white transition-none"
               >
-                <Link href={mainActionLink}>
-                  Upgrade_Now{" "}
-                  <ArrowUpRightIcon size={16} className="ml-2" weight="bold" />
+                <Link href={mainActionLink} className="flex items-center gap-2">
+                  Choisir ce plan <ArrowUpRightIcon size={16} weight="bold" />
                 </Link>
               </Button>
             </div>
@@ -284,61 +262,67 @@ export default function LandingPageView({ userId }: LandingPageViewProps) {
       </section>
 
       {/* --- FOOTER : MINIMALIST --- */}
-      <footer className="bg-white border-t border-slate-200 py-20 px-6">
+      <footer className="bg-slate-50 border-t border-slate-200 pt-20 px-6">
         <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row justify-between items-start gap-20">
-          <div className="space-y-6">
-            <Logo variant="icon" className="h-10 w-10" />
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 leading-relaxed max-w-xs">
-              L'infrastructure de facturation leader pour l'élite
-              entrepreneuriale ivoirienne. Built for speed. Built for profit.
+          <div className="space-y-8">
+            <Logo variant="icon" className="h-8 w-8 grayscale opacity-80" />
+            <p className="text-[11px] font-medium uppercase tracking-wider text-slate-500 leading-relaxed max-w-xs">
+              L&apos;infrastructure de facturation pour l&apos;élite
+              entrepreneuriale. Vitesse absolue. Rentabilité maximale.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-20">
-            <div className="flex flex-col gap-4">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-950">
-                System
+          <div className="grid grid-cols-2 gap-24">
+            <div className="flex flex-col gap-6">
+              <span className="text-[13px] font-bold uppercase tracking-[0.3em] text-slate-950">
+                Système
               </span>
-              <Link
-                href="/dashboard"
-                className="text-[11px] font-bold text-slate-500 uppercase hover:text-indigo-600 transition-none"
-              >
-                Tableau de bord
-              </Link>
-              <Link
-                href="/contact"
-                className="text-[11px] font-bold text-slate-500 uppercase hover:text-indigo-600 transition-none"
-              >
-                Support
-              </Link>
+              <div className="flex flex-col gap-4">
+                <Link
+                  href="/dashboard"
+                  className="text-[11px] text-slate-600 font-semibold uppercase hover:text-indigo-600 transition-colors"
+                >
+                  Tableau de bord
+                </Link>
+                <Link
+                  href="/contact"
+                  className="text-[11px] text-slate-600 font-semibold uppercase hover:text-indigo-600 transition-colors"
+                >
+                  Support technique
+                </Link>
+              </div>
             </div>
-            <div className="flex flex-col gap-4">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-950">
+
+            <div className="flex flex-col gap-6">
+              <span className="text-[13px] font-bold uppercase tracking-[0.3em] text-slate-950">
                 Légal
               </span>
-              <Link
-                href="/privacy"
-                className="text-[11px] font-bold text-slate-500 uppercase hover:text-indigo-600 transition-none"
-              >
-                Confidentialité
-              </Link>
-              <Link
-                href="/terms"
-                className="text-[11px] font-bold text-slate-500 uppercase hover:text-indigo-600 transition-none"
-              >
-                Conditions
-              </Link>
+              <div className="flex flex-col gap-4">
+                <Link
+                  href="/terms"
+                  className="text-[11px] text-slate-600 font-semibold uppercase hover:text-indigo-600 transition-colors"
+                >
+                  Conditions d&apos;usage
+                </Link>
+                <Link
+                  href="/privacy"
+                  className="text-[11px] text-slate-600 font-semibold uppercase hover:text-indigo-600 transition-colors"
+                >
+                  Confidentialité
+                </Link>
+              </div>
             </div>
           </div>
         </div>
-        <div className="max-w-[1400px] mx-auto mt-20 pt-8 border-t border-slate-100 flex justify-between items-center">
-          <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest">
+
+        <div className="max-w-[1400px] mx-auto mt-24 py-4 border-t border-slate-200/60 flex justify-between items-center">
+          <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">
             © 2026 DEVIS_EXPRESS_STUDIO // ABIDJAN_CI
           </span>
-          <div className="flex items-center gap-2">
-            <div className="w-1 h-1 bg-emerald-500 rounded-full" />
-            <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest">
-              Operational
+          <div className="flex items-center gap-3 bg-slate-100 px-3 py-1 border border-slate-200">
+            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="text-[9px] font-bold font-mono text-slate-600 uppercase tracking-tighter">
+              Système Opérationnel
             </span>
           </div>
         </div>

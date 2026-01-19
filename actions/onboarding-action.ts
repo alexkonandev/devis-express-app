@@ -1,8 +1,8 @@
 "use server";
 
 import db from "@/lib/prisma";
-import { getClerkUserId } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { currentUser, createClerkClient } from "@clerk/nextjs/server";
 
 export type OnboardingData = {
   profession: "TECH" | "CREATIVE" | "MARKETING" | "CONTENT" | "CONSULTING";
@@ -11,20 +11,44 @@ export type OnboardingData = {
 
 export async function completeOnboardingAction(data: OnboardingData) {
   try {
-    const authId = await getClerkUserId();
+    const user = await currentUser();
 
-    if (!authId) {
+    if (!user || !user.id) {
       return { success: false, error: "Utilisateur non identifié." };
     }
-    await db.user.update({
+
+    const authId = user.id;
+    const email = user.emailAddresses[0]?.emailAddress;
+
+    // 1. Mise à jour de la base de données Prisma
+    await db.user.upsert({
       where: { id: authId },
-      data: {
+      update: {
+        profession: data.profession,
+        businessModel: data.businessModel,
+        isOnboarded: true,
+      },
+      create: {
+        id: authId,
+        email: email,
         profession: data.profession,
         businessModel: data.businessModel,
         isOnboarded: true,
       },
     });
 
+    // 2. SYNCHRONISATION CLERK (Indispensable pour le Middleware)
+    const clerk = createClerkClient({
+      secretKey: process.env.CLERK_SECRET_KEY,
+    });
+
+    await clerk.users.updateUserMetadata(authId, {
+      publicMetadata: {
+        onboardingComplete: true,
+      },
+    });
+
+    // 3. Purge du cache
     revalidatePath("/", "layout");
 
     return { success: true };
@@ -32,7 +56,7 @@ export async function completeOnboardingAction(data: OnboardingData) {
     console.error("[ONBOARDING_ERROR]:", error);
     return {
       success: false,
-      error: "Impossible de finaliser la configuration.",
+      error: "Impossible de finaliser la configuration système.",
     };
   }
 }

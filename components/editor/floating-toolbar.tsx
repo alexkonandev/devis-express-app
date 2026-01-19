@@ -10,6 +10,7 @@ import {
   PencilSimpleIcon,
   LayoutIcon,
   CloudCheckIcon,
+  Icon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -45,7 +46,7 @@ const ToolbarBtn = ({
   active?: boolean;
   disabled?: boolean;
   onClick: () => void;
-  icon: any;
+  icon: Icon;
   title: string;
   className?: string;
 }) => (
@@ -134,7 +135,7 @@ export const FloatingToolbar = ({
       )}
 
       {/* --- BARRE PRINCIPALE (Industrial Frame) --- */}
-      <div className="flex items-center bg-white border border-slate-950 shadow-[5px_5px_0px_rgba(0,0,0,0.1)] rounded-none p-0 overflow-hidden">
+      <div className="flex items-center bg-white border border-slate-950  rounded-none p-0 overflow-hidden">
         {/* SECTION 1 : ENGINE MODES */}
         <div className="flex items-center border-r border-slate-200">
           <ToolbarBtn

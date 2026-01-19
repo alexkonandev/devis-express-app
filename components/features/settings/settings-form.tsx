@@ -207,7 +207,7 @@ export function SettingsForm({ initialData, isPro }: SettingsFormProps) {
       </main>
 
       {/* FOOTER FIXE */}
-      <footer className="shrink-0 h-10 bg-white border-t border-slate-200 px-6 flex items-center justify-between">
+      <footer className="shrink-0 h-8 bg-white border-t border-slate-200 px-6 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-2">
             <Terminal className="w-3 h-3 text-slate-400" />

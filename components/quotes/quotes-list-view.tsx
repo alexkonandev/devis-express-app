@@ -284,7 +284,8 @@ export function QuotesListView({
                     onClick={() => router.push(`/quotes/${selectedQuote.id}`)}
                     className="w-full border-white/20 hover:bg-white/10 text-white rounded-none h-11 text-[11px] font-black uppercase tracking-widest"
                   >
-                    <FileText className="w-4 h-4 mr-2" /> Accéder à l'Éditeur
+                    <FileText className="w-4 h-4 mr-2" /> Accéder à
+                    l&apos;Éditeur
                   </Button>
                 </div>
 
