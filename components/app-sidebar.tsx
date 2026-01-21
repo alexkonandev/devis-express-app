@@ -63,9 +63,9 @@ export function AppSidebar() {
 
         <NavIcon
           label="Nouveau Devis"
-          href="/quotes/editor"
+          href="/quotes/new"
           icon={PlusIcon}
-          isActive={pathname === "/quotes/editor"}
+          isActive={pathname === "/quotes/new"}
           isAction
         />
       </nav>

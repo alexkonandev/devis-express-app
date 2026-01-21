@@ -1,14 +1,47 @@
-
-import { CatalogOffer } from "@/app/generated/prisma/client";
-import { ActionResponse } from "./quote";
+// @/types/catalog.ts
+import {
+  Profession,
+  BusinessModel,
+  UserService,
+  CatalogOffer,
+} from "@/app/generated/prisma/client";
 
 /**
- * On utilise Omit pour la sécurité et on s'assure que
- * les champs correspondent à ton schéma (subtitle au lieu de description).
+ * SOURCE DE VÉRITÉ : L'ACTIF
+ * Fusionne les services personnels et les offres catalogue.
  */
-export type CatalogOfferInput = Omit<CatalogOffer, "createdAt" | "userId"> & {
-  id?: string;
+export type CatalogItem = (UserService | CatalogOffer) & {
+  category: string; // Obligatoire pour le tri
+  isPremium: boolean;
 };
 
-export type CatalogListItem = CatalogOffer;
-export type CatalogActionResponse = ActionResponse<CatalogOffer>;
+/**
+ * FILTRAGE STRATÉGIQUE
+ */
+export interface CatalogFilters {
+  search?: string;
+  profession?: Profession;
+  model?: BusinessModel;
+  type: "personal" | "library";
+}
+
+/**
+ * CONTRAT DE RÉPONSE UNIFIÉ
+ * Évite l'usage de 'any' et standardise les retours d'actions.
+ */
+export interface ActionResponse<T = void> {
+  success: boolean;
+  error?: string;
+  data?: T;
+}
+
+/**
+ * LIST ITEM (Pour la scannabilité dans le Radar)
+ */
+export interface CatalogListItem {
+  id: string;
+  title: string;
+  category: string;
+  unitPrice: number;
+  isPremium: boolean;
+}

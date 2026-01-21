@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
-import ClientsView from "@/components/clients/clients-view";
+import ClientsView from "@/features/clients/clients-view";
 import { getClients } from "@/actions/client-action";
 import { getClerkUserId } from "@/lib/auth";
 
@@ -16,9 +16,5 @@ export default async function ClientsPage() {
   // Fetch initial des clients (Server-side)
   const initialClients = await getClients();
 
-  return (
-    
-        <ClientsView initialData={initialClients} />
-  
-  );
+  return <ClientsView initialData={initialClients} />;
 }

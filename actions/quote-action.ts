@@ -28,21 +28,19 @@ export async function getQuotesListAction(
     const { page, pageSize, search, status, sortBy, sortDir } = filters;
     const skip = (page - 1) * pageSize;
 
-    // Construction dynamique du WHERE
-const where: Prisma.QuoteWhereInput = {
-  userId: authId,
-  ...(status !== "all" ? { status } : {}),
-  ...(search
-    ? {
-        OR: [
-          { number: { contains: search, mode: "insensitive" } },
-          { client: { name: { contains: search, mode: "insensitive" } } },
-        ],
-      }
-    : {}),
-};
+    const where: Prisma.QuoteWhereInput = {
+      userId: authId,
+      ...(status !== "all" ? { status } : {}),
+      ...(search
+        ? {
+            OR: [
+              { number: { contains: search, mode: "insensitive" } },
+              { client: { name: { contains: search, mode: "insensitive" } } },
+            ],
+          }
+        : {}),
+    };
 
-    // Exécution parallèle pour la performance (Total + Data)
     const [totalCount, quotes] = await Promise.all([
       db.quote.count({ where }),
       db.quote.findMany({
@@ -55,11 +53,11 @@ const where: Prisma.QuoteWhereInput = {
           number: true,
           status: true,
           updatedAt: true,
-          // Calcul du totalAmount via les lignes (ou champ dénormalisé si existant)
+          createdAt: true, // ✅ FIX: On l'ajoute ici pour qu'il soit récupéré en DB
           lines: {
             select: {
               quantity: true,
-              unitPriceEuros: true,
+              unitPrice: true,
             },
           },
           client: {
@@ -69,20 +67,21 @@ const where: Prisma.QuoteWhereInput = {
       }),
     ]);
 
-    // Mapping vers l'interface simplifiée QuoteListItem
     const items: QuoteListItem[] = quotes.map((q) => {
       const subtotal = q.lines.reduce(
-        (acc, line) => acc + line.quantity * line.unitPriceEuros,
+        (acc, line) => acc + line.quantity * line.unitPrice,
         0
       );
+
       return {
         id: q.id,
         number: q.number,
         title: `Devis ${q.number}`,
         status: q.status as PrismaQuoteStatus,
-        totalAmount: subtotal, // Tu peux ajouter la TVA ici si nécessaire
+        totalAmount: subtotal,
         clientName: q.client.name,
         updatedAt: q.updatedAt,
+        createdAt: q.createdAt, // ✅ Maintenant TypeScript est content car la donnée existe
       };
     });
 
@@ -129,7 +128,7 @@ export async function upsertQuoteAction(
       title: item.title,
       subtitle: item.subtitle,
       quantity: item.quantity,
-      unitPriceEuros: item.unitPriceEuros,
+      unitPrice: item.unitPrice,
     }));
 
     const quoteData = {

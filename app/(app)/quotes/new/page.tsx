@@ -2,12 +2,12 @@ import { redirect } from "next/navigation";
 import { getClerkUserId } from "@/lib/auth";
 import db from "@/lib/prisma";
 
-import { getCatalogOffers } from "@/actions/catalog-action";
+// ✅ Import corrigé : Utilisation de l'action unifiée
+import { getCatalogItemsAction } from "@/actions/catalog-action";
 import { getAvailableThemes } from "@/actions/design-action";
 import { getClients } from "@/actions/client-action";
 import CreateQuoteClient from "@/components/editor/CreateQuoteClient";
 
-// ✅ Import unique depuis ton fichier central
 import {
   EditorUserSettings,
   EditorTheme,
@@ -25,9 +25,11 @@ export default async function EditorPage({ searchParams }: PageProps) {
 
   const { themeId } = await searchParams;
 
-  // Parallélisation pour la vitesse (Profit & UX)
+  // 🚀 Exécution Parallèle : On récupère les items personnels pour l'éditeur
   const [catalog, themes, clients, user] = await Promise.all([
-    getCatalogOffers() as Promise<EditorCatalogOffer[]>,
+    getCatalogItemsAction({ type: "personal" }) as Promise<
+      EditorCatalogOffer[]
+    >,
     getAvailableThemes() as Promise<EditorTheme[]>,
     getClients() as Promise<EditorClient[]>,
     db.user.findUnique({ where: { id: userId } }),
@@ -35,7 +37,6 @@ export default async function EditorPage({ searchParams }: PageProps) {
 
   if (!user) redirect("/settings");
 
-  // On sélectionne le thème (soit celui de l'URL, soit le premier dispo)
   const preSelectedTheme = themeId
     ? themes.find((t) => t.id === themeId) || themes[0] || null
     : themes[0] || null;

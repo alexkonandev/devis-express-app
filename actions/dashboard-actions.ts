@@ -35,10 +35,10 @@ export async function getAdvancedDashboardData(): Promise<AdvancedDashboardData>
 
   // Helper pour calculer le montant total HT d'un devis basé sur les lignes
   const getQuoteTotal = (
-    lines: { unitPriceEuros: number; quantity: number }[]
+    lines: { unitPrice: number; quantity: number }[]
   ): number => {
     return lines.reduce(
-      (acc: number, line) => acc + line.unitPriceEuros * line.quantity,
+      (acc: number, line) => acc + line.unitPrice * line.quantity,
       0
     );
   };
@@ -110,7 +110,7 @@ export async function getAdvancedDashboardData(): Promise<AdvancedDashboardData>
     suggestedServices: catalogOffers.map((o) => ({
       id: o.id,
       title: o.title,
-      price: o.unitPriceEuros,
+      price: o.unitPrice,
       category: o.category,
     })),
   };

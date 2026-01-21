@@ -15,7 +15,7 @@ interface LandingPageViewProps {
 }
 
 export default function LandingPageView({ userId }: LandingPageViewProps) {
-  const mainActionLink = userId ? "/quotes/editor" : "/sign-up";
+  const mainActionLink = userId ? "/quotes/new" : "/sign-up";
 
   return (
     <main className="min-h-screen bg-white text-slate-950 font-sans selection:bg-indigo-600 selection:text-white overflow-x-hidden">

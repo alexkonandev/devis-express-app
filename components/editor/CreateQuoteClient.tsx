@@ -99,7 +99,7 @@ export default function CreateQuoteClient({
   const totals = useMemo(() => {
     const subTotal = activeQuote.items.reduce(
       (acc, item) =>
-        acc + (Number(item.quantity) * Number(item.unitPriceEuros) || 0),
+        acc + (Number(item.quantity) * Number(item.unitPrice) || 0),
       0
     );
     const discount = Number(activeQuote.financials.discountAmountEuros) || 0;
@@ -139,7 +139,7 @@ export default function CreateQuoteClient({
             title: item.title || "Nouvelle Ligne",
             subtitle: item.subtitle || "",
             quantity: item.quantity || 1,
-            unitPriceEuros: item.unitPriceEuros || 0,
+            unitPrice: item.unitPrice || 0,
           },
         ],
       }));
@@ -151,7 +151,7 @@ export default function CreateQuoteClient({
     if (preSelectedOffer && activeQuote.items.length === 0) {
       handleAddItem({
         title: preSelectedOffer.title,
-        unitPriceEuros: preSelectedOffer.unitPriceEuros,
+        unitPrice: preSelectedOffer.unitPrice,
         quantity: 1,
       });
     }

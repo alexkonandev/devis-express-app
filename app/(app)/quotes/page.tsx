@@ -1,28 +1,32 @@
+// @/app/quotes/page.tsx
 import { redirect } from "next/navigation";
 import { getClerkUserId } from "@/lib/auth";
-import { QuotesListView } from "@/components/quotes/quotes-list-view";
+import QuotesView from "@/features/quotes/quotes-view";
 
-// ✅ Import de l'action (Logique)
+// ✅ Import de l'action (Logique de récupération)
 import { getQuotesListAction } from "@/actions/quote-action";
 
-// ✅ Import du type (Contrat) depuis le bon dossier
+// ✅ Import du type pour les filtres
 import { QuoteFilters } from "@/types/quote";
 
 export const metadata = {
-  title: "Gestion des Devis | DevisExpress",
+  title: "QOS | Flux Devis Industriel",
 };
 
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export default async function DevisListPage({ searchParams }: PageProps) {
+export default async function QuotesPage({ searchParams }: PageProps) {
   const userId = await getClerkUserId();
   if (!userId) redirect("/sign-in");
 
   const resolvedParams = await searchParams;
 
-  // Utilisation du type QuoteFilters importé proprement
+  /**
+   * NORMALISATION DES FILTRES
+   * On transforme les query params bruts en un objet typé QuoteFilters
+   */
   const filters: QuoteFilters = {
     page:
       typeof resolvedParams.page === "string"
@@ -40,7 +44,9 @@ export default async function DevisListPage({ searchParams }: PageProps) {
     sortDir: resolvedParams.sortDir === "asc" ? "asc" : "desc",
   };
 
+  // FETCHING : Récupération des données via Server Action
   const result = await getQuotesListAction(filters);
 
-  return <QuotesListView initialData={result} currentFilters={filters} />;
+  // INJECTION : On passe le résultat à la vue interactive
+  return <QuotesView initialData={result} />;
 }

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import db from "@/lib/prisma";
 import { getAdvancedDashboardData } from "@/actions/dashboard-actions";
-import { DashboardView } from "@/components/features/dashboard/dashboard-view";
+import { DashboardView } from "@/features/dashboard/dashboard-view";
 import { Profession, BusinessModel } from "@/types/dashboard";
 
 export const metadata = {

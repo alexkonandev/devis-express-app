@@ -22,7 +22,7 @@ export interface EditorQuoteItem {
   title: string;
   subtitle: string;
   quantity: number;
-  unitPriceEuros: number;
+  unitPrice: number;
 }
 
 /**

@@ -13,7 +13,7 @@ export interface QuoteItemLine {
   title: string;
   subtitle: string;
   quantity: number;
-  unitPriceEuros: number;
+  unitPrice: number;
 }
 
 /**
@@ -60,11 +60,11 @@ export interface QuoteFilters {
 export interface QuoteListItem {
   id: string;
   number: string;
-  title: string;
-  status: QuoteStatus;
-  totalAmount: number;
   clientName: string;
+  totalAmount: number;
+  status: QuoteStatus;
   updatedAt: Date;
+  createdAt: Date;
 }
 
 export interface PaginatedQuotes {

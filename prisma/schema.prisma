@@ -93,7 +93,7 @@ model CatalogOffer {
   subtitle        String    @default("")
   userId          String
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  unitPriceEuros  Float
+  unitPrice  Float
   isPremium       Boolean   @default(false)
   createdAt       DateTime  @default(now())
 
@@ -106,7 +106,7 @@ model UserService {
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   title           String
   subtitle        String    @default("")
-  unitPriceEuros  Float
+  unitPrice  Float
   createdAt       DateTime  @default(now())
   @@unique([userId, title])
 }
@@ -153,7 +153,7 @@ model QuoteLine {
   title           String
   subtitle        String    @default("")
   quantity        Float     @default(1)
-  unitPriceEuros  Float
+  unitPrice  Float
   @@map("quote_lines")
 }
 model Theme {

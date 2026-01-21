@@ -14,8 +14,6 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-
-// --- TYPES CENTRALISÉS ---
 import { EditorTheme } from "@/types/editor";
 
 interface FloatingToolbarProps {
@@ -33,7 +31,7 @@ interface FloatingToolbarProps {
 
 /**
  * COMPOSANT : ToolbarBtn
- * MISSION : Bouton industriel haute précision
+ * MISSION : Bouton industriel haute précision avec feedback visuel noir/indigo
  */
 const ToolbarBtn = ({
   active = false,
@@ -59,9 +57,9 @@ const ToolbarBtn = ({
     className={cn(
       "h-10 w-10 rounded-none transition-none border-none",
       active
-        ? "bg-slate-950 text-white"
-        : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
-      disabled && "opacity-30 cursor-not-allowed",
+        ? "bg-slate-900 text-white"
+        : "text-slate-500 hover:bg-slate-50 hover:text-slate-900",
+      disabled && "opacity-20 cursor-not-allowed",
       className
     )}
   >
@@ -91,10 +89,10 @@ export const FloatingToolbar = ({
     <div className="flex flex-col items-center">
       {/* --- MENU THEMES (Industrial Pop-over) --- */}
       {showThemeMenu && (
-        <div className="mb-0 w-64 bg-white border border-slate-950 border-b-0 p-0 z-50 animate-in slide-in-from-bottom-1 duration-150">
+        <div className="mb-0 w-64 bg-white border border-slate-200 p-0 z-50 shadow-[4px_4px_0_0_rgba(15,23,42,0.1)] animate-in fade-in slide-in-from-bottom-2 duration-200">
           <div className="px-3 py-2 bg-slate-50 border-b border-slate-200">
-            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">
-              System_Themes
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">
+              SYSTEME_DE_STYLES
             </span>
           </div>
           <div className="flex flex-col max-h-60 overflow-y-auto scrollbar-none">
@@ -119,7 +117,7 @@ export const FloatingToolbar = ({
                   <span
                     className={cn(
                       "text-[10px] uppercase font-bold tracking-tight",
-                      isActive ? "text-indigo-600" : "text-slate-600"
+                      isActive ? "text-indigo-600" : "text-slate-500"
                     )}
                   >
                     {theme.name}
@@ -135,62 +133,62 @@ export const FloatingToolbar = ({
       )}
 
       {/* --- BARRE PRINCIPALE (Industrial Frame) --- */}
-      <div className="flex items-center bg-white border border-slate-950  rounded-none p-0 overflow-hidden">
-        {/* SECTION 1 : ENGINE MODES */}
-        <div className="flex items-center border-r border-slate-200">
+      <div className="flex items-center bg-white border border-slate-200 rounded-none p-0 overflow-hidden shadow-[8px_8px_0_0_rgba(15,23,42,0.05)]">
+        {/* SECTION 1 : MODES D'ENGINE */}
+        <div className="flex items-center border-r border-slate-100">
           <ToolbarBtn
             icon={PencilSimpleIcon}
-            title="Studio Mode"
+            title="Mode Studio"
             active={viewMode === "studio"}
             onClick={() => setViewMode("studio")}
           />
           <ToolbarBtn
             icon={EyeIcon}
-            title="Client Preview"
+            title="Aperçu Client"
             active={viewMode === "preview"}
             onClick={() => setViewMode("preview")}
           />
         </div>
 
-        {/* SECTION 2 : OPTICS (ZOOM) */}
-        <div className="flex items-center border-r border-slate-200">
+        {/* SECTION 2 : OPTIQUES (ZOOM) */}
+        <div className="flex items-center border-r border-slate-100 bg-slate-50/30">
           <ToolbarBtn
             icon={MagnifyingGlassMinusIcon}
-            title="Out"
+            title="Zoom Arrière"
             onClick={() => setZoom(Math.max(zoom - STEP, MIN_ZOOM))}
             disabled={zoom <= MIN_ZOOM}
           />
           <div className="w-14 text-center">
-            <span className="text-[10px] font-mono font-black text-slate-900 tabular-nums">
+            <span className="text-[11px] font-mono font-black text-slate-900 tabular-nums">
               {Math.round(zoom * 100)}%
             </span>
           </div>
           <ToolbarBtn
             icon={MagnifyingGlassPlusIcon}
-            title="In"
+            title="Zoom Avant"
             onClick={() => setZoom(Math.min(zoom + STEP, MAX_ZOOM))}
             disabled={zoom >= MAX_ZOOM}
           />
         </div>
 
-        {/* SECTION 3 : STYLE ENGINE */}
-        <div className="border-r border-slate-200">
+        {/* SECTION 3 : MOTEUR DE STYLE */}
+        <div className="border-r border-slate-100">
           <ToolbarBtn
             icon={LayoutIcon}
-            title="Themes"
+            title="Thèmes"
             active={showThemeMenu}
             onClick={() => setShowThemeMenu(!showThemeMenu)}
           />
         </div>
 
-        {/* SECTION 4 : DEPLOYMENT (SAVE & PRINT) */}
+        {/* SECTION 4 : DEPLOIEMENT (SAUVEGARDE & PRINT) */}
         <div className="flex items-center">
           <Button
             variant="ghost"
             size="icon"
             onClick={onSave}
             disabled={isSaving}
-            className="h-10 w-10 rounded-none text-slate-500 hover:bg-slate-100 transition-none"
+            className="h-10 w-10 rounded-none text-slate-500 hover:bg-slate-50 transition-none"
           >
             {isSaving ? (
               <CircleNotchIcon className="w-4 h-4 animate-spin text-indigo-600" />
@@ -201,11 +199,11 @@ export const FloatingToolbar = ({
 
           <Button
             onClick={onPrint}
-            className="h-10 px-4 rounded-none bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 transition-none border-l border-slate-950/10"
+            className="h-10 px-5 rounded-none bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2 transition-none border-l border-slate-200"
           >
             <PrinterIcon size={18} weight="bold" />
-            <span className="text-[10px] font-black uppercase tracking-widest">
-              Print
+            <span className="text-[10px] font-black uppercase tracking-[0.15em]">
+              IMPRIMER
             </span>
           </Button>
         </div>

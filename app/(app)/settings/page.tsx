@@ -2,7 +2,7 @@ import { getClerkUserId } from "@/lib/auth";
 import db from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { checkSubscription } from "@/lib/subscription";
-import { SettingsForm } from "@/components/features/settings/settings-form";
+import { SettingsForm } from "@/features/settings/settings-form";
 
 export default async function SettingsPage() {
   const userId = await getClerkUserId();
@@ -30,9 +30,5 @@ export default async function SettingsPage() {
     defaultTerms: user.defaultTerms || "",
   };
 
-  return (
-
-      <SettingsForm initialData={initialData} isPro={isPro} />
- 
-  );
+  return <SettingsForm initialData={initialData} isPro={isPro} />;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo} from "react";
+import React, { useState, useMemo } from "react";
 import {
   CaretLeftIcon,
   UserIcon,
@@ -14,7 +14,7 @@ import {
   MagnifyingGlassIcon,
   Icon,
 } from "@phosphor-icons/react";
-import { ClientFormDialog } from "@/components/clients/client-form-dialog";
+import { ClientFormDialog } from "@/components/editor/client-form-dialog";
 import {
   EditorActiveQuote,
   EditorQuoteItem,
@@ -32,7 +32,7 @@ interface StudioSidebarLeftProps {
     value: string | number
   ) => void;
   onBack?: () => void;
-  initialClients: EditorClient[]; 
+  initialClients: EditorClient[];
   catalogItems: EditorCatalogOffer[];
   addItem: (item?: Partial<EditorQuoteItem>) => void;
   updateItem: (
@@ -43,7 +43,7 @@ interface StudioSidebarLeftProps {
   removeItem: (index: number) => void;
 }
 
-// --- MICRO-COMPOSANTS ---
+// --- MICRO-COMPOSANTS BLUEPRINT V3.1 ---
 
 const SectionHeader = ({
   title,
@@ -54,10 +54,10 @@ const SectionHeader = ({
   icon: Icon;
   right?: React.ReactNode;
 }) => (
-  <div className="h-8 bg-slate-50 border-y border-slate-200 flex items-center justify-between px-3 shrink-0">
+  <div className="h-9 bg-slate-50 border-y border-slate-200 flex items-center justify-between px-3 shrink-0">
     <div className="flex items-center gap-2">
-      <Icon size={12} weight="bold" className="text-slate-400" />
-      <span className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-500">
+      <Icon size={12} weight="bold" className="text-slate-900" />
+      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">
         {title}
       </span>
     </div>
@@ -65,15 +65,15 @@ const SectionHeader = ({
   </div>
 );
 
-const PropertyRow = ({
+const ChampPropriete = ({
   label,
   children,
 }: {
   label: string;
   children: React.ReactNode;
 }) => (
-  <div className="flex flex-col gap-0.5 px-3 py-2 border-b border-slate-50">
-    <label className="text-[8px] font-bold uppercase tracking-wider text-slate-400 select-none">
+  <div className="flex flex-col gap-1 px-3 py-3 border-b border-slate-50">
+    <label className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-500 select-none">
       {label}
     </label>
     <div className="flex items-center gap-2">{children}</div>
@@ -113,54 +113,56 @@ export const StudioSidebarLeft = ({
       />
 
       <div className="flex flex-col h-full bg-white border-r border-slate-200 w-[320px] overflow-hidden rounded-none shadow-none">
-        {/* HEADER : NAVIGATION */}
-        <div className="h-12 shrink-0 flex items-center px-3 gap-3 border-b border-slate-200 bg-white z-10">
+        {/* EN-TÊTE : NAVIGATION & IDENTITÉ PROJET */}
+        <div className="h-14 shrink-0 flex items-center px-3 gap-3 border-b border-slate-200 bg-white z-10">
           <button
             onClick={onBack}
-            className="p-1 hover:bg-slate-100 transition-none"
+            className="p-1.5 hover:bg-slate-100 transition-none rounded-none text-slate-900"
           >
-            <CaretLeftIcon size={16} weight="bold" />
+            <CaretLeftIcon size={18} weight="bold" />
           </button>
           <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
-              Editor_Instance
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+              INST_EDITEUR
             </span>
             <input
               value={activeQuote.title}
               onChange={(e) => updateField(null, "title", e.target.value)}
-              className="bg-transparent text-[13px] font-black text-slate-900 uppercase tracking-tighter outline-none truncate"
+              className="bg-transparent text-[14px] font-black text-indigo-600 uppercase tracking-tighter outline-none truncate placeholder:italic placeholder:font-normal placeholder:text-slate-200"
+              placeholder="NOM_DU_PROJET..."
             />
           </div>
         </div>
 
-        {/* ZONE DE SCROLL PRINCIPALE */}
+        {/* ZONE DE TRAVAIL INTERNE */}
         <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col min-h-0 bg-white">
-          {/* SECTION 1 : CLIENT & FINANCIALS */}
-          <div className="shrink-0 border-b border-slate-100">
-            <SectionHeader title="Identification" icon={UserIcon} />
-            <PropertyRow label="Raison Sociale">
-              <div className="flex w-full items-center border border-slate-200 bg-white focus-within:border-slate-950 transition-none">
+          {/* IDENTIFICATION CLIENT */}
+          <div className="shrink-0">
+            <SectionHeader title="IDENTIFICATION_CLIENT" icon={UserIcon} />
+            <ChampPropriete label="Raison Sociale">
+              <div className="flex w-full items-center border border-slate-200 bg-white focus-within:border-slate-900 transition-none">
                 <input
                   value={activeQuote.client.name}
                   onChange={(e) =>
                     updateField("client", "name", e.target.value)
                   }
-                  className="w-full bg-transparent px-2 py-1 text-[11px] font-bold text-slate-900 outline-none"
-                  placeholder="Client..."
+                  className="w-full bg-transparent px-2 py-2 text-[12px] font-bold text-slate-900 uppercase outline-none placeholder:text-slate-200 placeholder:italic placeholder:font-normal"
+                  placeholder="CLIENT_NON_DEFINI..."
                 />
                 <button
                   onClick={() => setIsModalOpen(true)}
-                  className="h-7 w-7 flex items-center justify-center border-l border-slate-100 text-slate-400 hover:text-indigo-600"
+                  className="h-9 w-9 flex items-center justify-center border-l border-slate-100 text-slate-900 hover:bg-slate-50"
                 >
-                  <PlusIcon size={12} weight="bold" />
+                  <PlusIcon size={14} weight="bold" />
                 </button>
               </div>
-            </PropertyRow>
+            </ChampPropriete>
 
-            <div className="grid grid-cols-2 divide-x divide-slate-100 border-b border-slate-50">
-              <div className="flex flex-col px-3 py-2 gap-0.5">
-                <span className="text-[7px] font-black text-slate-400 uppercase">
-                  Discount_€
+            {/* FINANCES : GRILLE DE HAUTE DENSITÉ */}
+            <div className="grid grid-cols-2 divide-x divide-slate-100 border-b border-slate-200">
+              <div className="flex flex-col px-3 py-3 gap-1">
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                  Remise_€
                 </span>
                 <input
                   type="number"
@@ -172,12 +174,12 @@ export const StudioSidebarLeft = ({
                       parseFloat(e.target.value) || 0
                     )
                   }
-                  className="bg-transparent font-mono text-[12px] font-bold text-indigo-600 outline-none"
+                  className="bg-transparent font-mono text-[14px] font-black text-indigo-600 outline-none"
                 />
               </div>
-              <div className="flex flex-col px-3 py-2 gap-0.5">
-                <span className="text-[7px] font-black text-slate-400 uppercase">
-                  Tax_Rate_%
+              <div className="flex flex-col px-3 py-3 gap-1">
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                  TVA_%
                 </span>
                 <input
                   type="number"
@@ -189,59 +191,67 @@ export const StudioSidebarLeft = ({
                       parseFloat(e.target.value) || 0
                     )
                   }
-                  className="bg-transparent font-mono text-[12px] font-medium text-slate-900 outline-none"
+                  className="bg-transparent font-mono text-[14px] font-black text-slate-900 outline-none"
                 />
               </div>
             </div>
           </div>
 
-          {/* SECTION 2 : ITEMS (LIGNES ACTIVES) */}
+          {/* LIGNES DE DEVIS */}
           <div className="shrink-0 flex flex-col min-h-0">
             <SectionHeader
-              title="Lignes Actives"
+              title="LIGNES_ACTIVES"
               icon={ListBulletsIcon}
               right={
-                <span className="font-mono text-[10px] font-bold text-slate-900 px-2 py-0.5 bg-slate-100">
+                <span className="font-mono text-[11px] font-black text-white px-2 py-0.5 bg-slate-900">
                   {activeQuote.items.length}
                 </span>
               }
             />
-            <div className="p-3 space-y-3">
+            <div className="p-3 space-y-4">
               {activeQuote.items.map((item, idx) => (
                 <div
                   key={idx}
-                  className="group border-l-2 border-slate-100 hover:border-indigo-500 pl-3 py-1 relative transition-none"
+                  className="group border-l-2 border-slate-200 hover:border-indigo-600 pl-3 py-1 relative transition-none"
                 >
                   <button
                     onClick={() => removeItem(idx)}
-                    className="absolute -right-1 top-0 opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-500"
+                    className="absolute -right-1 top-0 opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-600 transition-none"
                   >
                     <XIcon size={12} weight="bold" />
                   </button>
                   <input
                     value={item.title}
                     onChange={(e) => updateItem(idx, "title", e.target.value)}
-                    className="w-full bg-transparent text-[11px] font-bold text-slate-900 uppercase outline-none focus:text-indigo-600"
-                    placeholder="Désignation..."
+                    className="w-full bg-transparent text-[12px] font-bold text-slate-900 uppercase outline-none focus:text-indigo-600 placeholder:text-slate-200 italic"
+                    placeholder="DESIGNATION_SERVICE..."
                   />
-                  <div className="flex items-center gap-4 mt-1">
-                    <div className="flex items-center gap-1">
-                      <CurrencyEurIcon size={10} className="text-slate-400" />
+                  <div className="flex items-center gap-4 mt-2">
+                    <div className="flex items-center gap-1.5">
+                      <CurrencyEurIcon
+                        size={12}
+                        weight="bold"
+                        className="text-slate-400"
+                      />
                       <input
                         type="number"
-                        value={item.unitPriceEuros}
+                        value={item.unitPrice}
                         onChange={(e) =>
                           updateItem(
                             idx,
-                            "unitPriceEuros",
+                            "unitPrice",
                             parseFloat(e.target.value) || 0
                           )
                         }
-                        className="w-16 bg-transparent font-mono text-[11px] font-medium border-b border-transparent focus:border-slate-200 outline-none"
+                        className="w-16 bg-transparent font-mono text-[12px] font-black text-slate-900 outline-none border-b border-transparent focus:border-slate-200"
                       />
                     </div>
-                    <div className="flex items-center gap-1">
-                      <HashIcon size={10} className="text-slate-400" />
+                    <div className="flex items-center gap-1.5">
+                      <HashIcon
+                        size={12}
+                        weight="bold"
+                        className="text-slate-400"
+                      />
                       <input
                         type="number"
                         value={item.quantity}
@@ -252,7 +262,7 @@ export const StudioSidebarLeft = ({
                             parseFloat(e.target.value) || 0
                           )
                         }
-                        className="w-12 bg-transparent font-mono text-[11px] font-medium border-b border-transparent focus:border-slate-200 outline-none"
+                        className="w-12 bg-transparent font-mono text-[12px] font-black text-slate-900 outline-none border-b border-transparent focus:border-slate-200"
                       />
                     </div>
                   </div>
@@ -260,79 +270,87 @@ export const StudioSidebarLeft = ({
               ))}
               <button
                 onClick={() => addItem()}
-                className="w-full py-2 border border-dashed border-slate-200 text-[9px] font-black uppercase text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-none"
+                className="w-full py-2 border border-dashed border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 hover:border-indigo-600 transition-none"
               >
-                + Nouvelle Ligne
+                + AJOUTER_LIGNE
               </button>
             </div>
           </div>
 
-          {/* SECTION 3 : CATALOGUE (SOURCE) */}
-          <div className="shrink-0 border-t border-slate-100 bg-slate-50/30">
+          {/* CATALOGUE SOURCE */}
+          <div className="shrink-0 bg-slate-50/50">
             <SectionHeader
-              title="Catalogue Source"
+              title="CATALOGUE_SOURCE"
               icon={MagnifyingGlassIcon}
             />
-            <div className="p-2 shrink-0">
+            <div className="p-3">
               <input
-                placeholder="Filtrer..."
+                placeholder="RECHERCHER_SERVICE..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-white border border-slate-200 px-2 py-1.5 text-[10px] font-bold uppercase outline-none focus:border-indigo-600 shadow-sm"
+                className="w-full bg-white border-2 border-slate-200 px-3 py-2 text-[10px] font-black uppercase outline-none focus:border-slate-900 transition-all placeholder:text-slate-200"
               />
             </div>
-            <div className="max-h-[200px] overflow-y-auto p-2 space-y-1 scrollbar-none">
+            <div className="max-h-50 overflow-y-auto p-3 pt-0 space-y-2 scrollbar-none">
               {filteredCatalog.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => {
                     addItem({
                       title: item.title,
-                      unitPriceEuros: item.unitPriceEuros,
+                      unitPrice: item.unitPrice,
                       quantity: 1,
                     });
-                    toast.success(`Ajouté`);
+                    toast.success(`SERVICE_AJOUTE`);
                   }}
-                  className="w-full flex items-center justify-between p-2 bg-white border border-slate-100 hover:border-indigo-600 text-left shadow-sm"
+                  className="w-full flex items-center justify-between p-2.5 bg-white border border-slate-200 hover:border-indigo-600 text-left transition-none group shadow-sm"
                 >
-                  <span className="text-[10px] font-bold text-slate-900 uppercase truncate flex-1">
+                  <span className="text-[10px] font-bold text-slate-900 uppercase truncate flex-1 group-hover:text-indigo-600">
                     {item.title}
                   </span>
-                  <span className="font-mono text-[10px] font-bold text-slate-900 ml-2 whitespace-nowrap">
-                    {item.unitPriceEuros}€
+                  <span className="font-mono text-[11px] font-black text-slate-900 ml-3">
+                    {item.unitPrice}€
                   </span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* SPACER : Consomme l'espace restant pour coller l'audit en bas */}
-          <div className="flex-1 min-h-[40px]" />
+          <div className="flex-1 min-h-10" />
 
-          {/* ANCHOR BOTTOM : SYSTEM AUDIT */}
+          {/* AUDIT SYSTEME */}
           <div className="shrink-0 mt-auto border-t border-slate-200 bg-white">
-            <SectionHeader title="System_Audit" icon={GearSixIcon} />
-            <div className="px-3 py-3 flex flex-col gap-2">
+            <SectionHeader title="AUDIT_SYSTEME" icon={GearSixIcon} />
+            <div className="px-3 py-4 flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-slate-400 uppercase tracking-tighter">
-                  <HashIcon size={10} />
-                  <span className="text-[9px] font-bold">Document_ID</span>
+                <div className="flex items-center gap-2 text-slate-400">
+                  <HashIcon size={12} weight="bold" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">
+                    DOC_ID
+                  </span>
                 </div>
-                <span className="text-[10px] font-mono font-bold text-indigo-600">
-                  {activeQuote.quote.number || "PENDING"}
+                <span className="text-[11px] font-mono font-black text-indigo-600">
+                  {activeQuote.quote.number || "EN_ATTENTE"}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-slate-400 uppercase tracking-tighter">
-                  <CloudCheckIcon size={10} className="text-indigo-500" />
-                  <span className="text-[8px] font-black">Sync_Status</span>
+                <div className="flex items-center gap-2 text-slate-400">
+                  <CloudCheckIcon
+                    size={12}
+                    weight="bold"
+                    className="text-indigo-600"
+                  />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">
+                    STATUT_SYNC
+                  </span>
                 </div>
-                <span className="text-[9px] font-mono text-slate-400 uppercase">
-                  20:22_OPTIMAL
+                <span className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-tighter">
+                  FLUX_OPTIMAL
                 </span>
               </div>
             </div>
-            <div className="h-[3px] bg-indigo-600 w-full" />
+            {/* LIGNE DE FORCE FINALE */}
+            <div className="h-1 bg-indigo-600 w-full" />
           </div>
         </div>
       </div>

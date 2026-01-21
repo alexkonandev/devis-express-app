@@ -20,7 +20,7 @@ const PrintableQuote = forwardRef<HTMLDivElement, PrintableQuoteProps>(
     const financials = useMemo(() => {
       const subTotal = quote.items.reduce(
         (acc, item) =>
-          acc + (Number(item.quantity) * Number(item.unitPriceEuros) || 0),
+          acc + (Number(item.quantity) * Number(item.unitPrice) || 0),
         0
       );
       const discount = Number(quote.financials.discountAmountEuros) || 0;
@@ -150,13 +150,13 @@ const PrintableQuote = forwardRef<HTMLDivElement, PrintableQuoteProps>(
                       {item.quantity}
                     </td>
                     <td className="py-6 px-2 text-[11px] font-mono font-medium text-right text-slate-600 align-top">
-                      {item.unitPriceEuros.toLocaleString("fr-FR", {
+                      {item.unitPrice.toLocaleString("fr-FR", {
                         minimumFractionDigits: 2,
                       })}
                       €
                     </td>
                     <td className="py-6 px-2 text-[11px] font-mono font-black text-right text-slate-900 align-top">
-                      {(item.quantity * item.unitPriceEuros).toLocaleString(
+                      {(item.quantity * item.unitPrice).toLocaleString(
                         "fr-FR",
                         { minimumFractionDigits: 2 }
                       )}
